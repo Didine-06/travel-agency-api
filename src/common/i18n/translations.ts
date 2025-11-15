@@ -11,6 +11,10 @@ export const translations = {
     INVALID_USER_ID: 'Identifiant utilisateur invalide',
     USER_INACTIVE: 'Utilisateur inactif',
     UNAUTHORIZED_USER_ACCESS: 'Accès non autorisé',
+    USER_DELETED_SUCCESSFULLY: 'Utilisateur supprimé avec succès',
+    USERS_DELETED_SUCCESSFULLY: 'Utilisateurs supprimés avec succès',
+    USER_UPDATED_SUCCESSFULLY: 'Utilisateur mis à jour avec succès',
+    USER_CREATED_SUCCESSFULLY: 'Utilisateur créé avec succès',
 
     // Auth Errors
     INVALID_CREDENTIALS: 'Identifiants invalides',
@@ -36,6 +40,10 @@ export const translations = {
     INVALID_USER_ID: 'Invalid user ID',
     USER_INACTIVE: 'Inactive user',
     UNAUTHORIZED_USER_ACCESS: 'Unauthorized access',
+    USER_DELETED_SUCCESSFULLY: 'User deleted successfully',
+    USERS_DELETED_SUCCESSFULLY: 'Users deleted successfully',
+    USER_UPDATED_SUCCESSFULLY: 'User updated successfully',
+    USER_CREATED_SUCCESSFULLY: 'User created successfully',
 
     // Auth Errors
     INVALID_CREDENTIALS: 'Invalid credentials',

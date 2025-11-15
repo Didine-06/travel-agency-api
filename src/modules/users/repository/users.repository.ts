@@ -40,4 +40,14 @@ export class UsersRepository {
       where: { id },
     });
   }
+
+  async deleteMany(ids: string[]): Promise<{ count: number }> {
+    return this.prisma.user.deleteMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+  }
 }
