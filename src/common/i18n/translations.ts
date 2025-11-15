@@ -1,0 +1,52 @@
+export const translations = {
+  fr: {
+    // User Errors
+    USER_NOT_FOUND: 'Utilisateur introuvable',
+    USER_ALREADY_EXISTS: 'Cet utilisateur existe déjà',
+    INVALID_USER_DATA: 'Données utilisateur invalides',
+    USER_EMAIL_ALREADY_EXISTS: 'Cet email est déjà utilisé',
+    USER_UPDATE_FAILED: "Échec de la mise à jour de l'utilisateur",
+    USER_DELETE_FAILED: "Échec de la suppression de l'utilisateur",
+    USER_CREATION_FAILED: "Échec de la création de l'utilisateur",
+    INVALID_USER_ID: 'Identifiant utilisateur invalide',
+    USER_INACTIVE: 'Utilisateur inactif',
+    UNAUTHORIZED_USER_ACCESS: 'Accès non autorisé',
+
+    // Auth Errors
+    INVALID_CREDENTIALS: 'Identifiants invalides',
+    TOKEN_EXPIRED: 'Votre session a expiré',
+    TOKEN_INVALID: 'Token invalide',
+    TOKEN_MISSING: 'Token manquant',
+    UNAUTHORIZED: 'Accès non autorisé',
+    FORBIDDEN: 'Accès interdit',
+    EMAIL_ALREADY_EXISTS: 'Cet email est déjà utilisé',
+    REGISTRATION_FAILED: "Échec de l'inscription",
+    WEAK_PASSWORD: 'Le mot de passe est trop faible',
+    INVALID_EMAIL_FORMAT: "Format d'email invalide",
+  },
+  en: {
+    // User Errors
+    USER_NOT_FOUND: 'User not found',
+    USER_ALREADY_EXISTS: 'User already exists',
+    INVALID_USER_DATA: 'Invalid user data',
+    USER_EMAIL_ALREADY_EXISTS: 'This email is already in use',
+    USER_UPDATE_FAILED: 'User update failed',
+    USER_DELETE_FAILED: 'User deletion failed',
+    USER_CREATION_FAILED: 'User creation failed',
+    INVALID_USER_ID: 'Invalid user ID',
+    USER_INACTIVE: 'Inactive user',
+    UNAUTHORIZED_USER_ACCESS: 'Unauthorized access',
+
+    // Auth Errors
+    INVALID_CREDENTIALS: 'Invalid credentials',
+    TOKEN_EXPIRED: 'Your session has expired',
+    TOKEN_INVALID: 'Invalid token',
+    TOKEN_MISSING: 'Token missing',
+    UNAUTHORIZED: 'Unauthorized access',
+    FORBIDDEN: 'Forbidden',
+    EMAIL_ALREADY_EXISTS: 'This email is already in use',
+    REGISTRATION_FAILED: 'Registration failed',
+    WEAK_PASSWORD: 'Password is too weak',
+    INVALID_EMAIL_FORMAT: 'Invalid email format',
+  },
+};

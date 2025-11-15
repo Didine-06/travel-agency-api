@@ -12,7 +12,7 @@ async function bootstrap() {
   // Swagger Configuration
   const config = new DocumentBuilder()
     .setTitle('Travel Agency API')
-    .setDescription('API REST pour une agence de voyage')
+    .setDescription('Rest API for the Travel Agency application')
     .setVersion('1.0')
     .addBearerAuth(
       {

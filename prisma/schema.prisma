@@ -10,17 +10,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  firstName String?  @map("first_name")
-  lastName  String?  @map("last_name")
-  role      UserRole @default(USER)
-  isActive  Boolean  @default(true) @map("is_active")
+model Language {
+  isoCode   String @id @map("iso_code")
+  name      String
+  isActive  Boolean @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  users User[]
+
+  @@map("languages")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  firstName  String?  @map("first_name")
+  lastName   String?  @map("last_name")
+  role       UserRole @default(USER)
+  isActive   Boolean  @default(true) @map("is_active")
+  languageId String   @default("en") @map("language_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  language Language @relation(fields: [languageId], references: [isoCode], onDelete: Restrict)
   bookings Booking[]
 
   @@map("users")

@@ -1,22 +1,20 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UsersRepository } from './repository/users.repository';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dtos';
+import { CreateUserDto, UserResponseDto } from './dtos';
+import { ApiResponse, ErrorResponse } from '../../common/helpers';
+import { UserErrors } from './enums';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+  async create(createUserDto: CreateUserDto) {
     const existingUser = await this.usersRepository.findByEmail(
       createUserDto.email,
     );
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      return ErrorResponse(UserErrors.USER_EMAIL_ALREADY_EXISTS);
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
@@ -25,63 +23,24 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    return this.excludePassword(user);
+    const userData = this.excludePassword(user);
+    return ApiResponse(userData);
   }
 
-  async findAll(): Promise<UserResponseDto[]> {
+  async findAll() {
     const users = await this.usersRepository.findAll();
-    return users.map((user) => this.excludePassword(user));
+    const usersData = users.map((user) => this.excludePassword(user));
+    return ApiResponse(usersData);
   }
 
-  async findById(id: string): Promise<UserResponseDto> {
+  async findById(id: string) {
     const user = await this.usersRepository.findById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return this.excludePassword(user);
-  }
-
-  async findByEmail(email: string): Promise<UserResponseDto | null> {
-    const user = await this.usersRepository.findByEmail(email);
-    if (!user) {
-      return null;
-    }
-    return this.excludePassword(user);
-  }
-
-  async update(
-    id: string,
-    updateUserDto: UpdateUserDto,
-  ): Promise<UserResponseDto> {
-    const user = await this.usersRepository.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
+      return ErrorResponse(UserErrors.USER_NOT_FOUND);
     }
 
-    if (updateUserDto.email && updateUserDto.email !== user.email) {
-      const existingUser = await this.usersRepository.findByEmail(
-        updateUserDto.email,
-      );
-      if (existingUser) {
-        throw new ConflictException('Email already exists');
-      }
-    }
-
-    const updateData = { ...updateUserDto };
-    if (updateUserDto.password) {
-      updateData.password = await bcrypt.hash(updateUserDto.password, 10);
-    }
-
-    const updatedUser = await this.usersRepository.update(id, updateData);
-    return this.excludePassword(updatedUser);
-  }
-
-  async delete(id: string): Promise<void> {
-    const user = await this.usersRepository.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    await this.usersRepository.delete(id);
+    const userData = this.excludePassword(user);
+    return ApiResponse(userData);
   }
 
   private excludePassword(user: any): UserResponseDto {
