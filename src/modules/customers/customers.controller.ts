@@ -17,46 +17,46 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { DestinationsService } from './destinations.service';
+import { CustomersService } from './customers.service';
 import {
-  CreateDestinationDto,
-  DestinationResponseDto,
-  UpdateDestinationDto,
-  DeleteDestinationsDto,
+  CreateCustomerDto,
+  CustomerResponseDto,
+  UpdateCustomerDto,
+  DeleteCustomersDto,
 } from './dtos';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { DestinationErrors } from './enums';
+import { CustomerErrors } from './enums';
 import { UserLanguage } from '../../common/decorators/user-language.decorator';
 import { I18nService } from '../../common/i18n';
 import { UserLanguageGuard } from '../../common/guards/user-language.guard';
 
-@ApiTags('Destinations')
-@Controller('destinations')
-export class DestinationsController {
+@ApiTags('Customers')
+@ApiBearerAuth('JWT-auth')
+@Controller('customers')
+@UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
+@Roles(UserRole.ADMIN, UserRole.AGENT)
+export class CustomersController {
   constructor(
-    private readonly destinationsService: DestinationsService,
+    private readonly customersService: CustomersService,
     private readonly i18n: I18nService,
   ) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
-  @Roles(UserRole.AGENT, UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Créer une nouvelle destination' })
+  @ApiOperation({ summary: 'Create a new customer' })
   @ApiResponse({
     status: 201,
-    description: 'Destination créée',
-    type: DestinationResponseDto,
+    description: 'Customer created',
+    type: CustomerResponseDto,
   })
   async create(
-    @Body() createDestinationDto: CreateDestinationDto,
+    @Body() createCustomerDto: CreateCustomerDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.destinationsService.create(createDestinationDto);
+    const result = await this.customersService.create(createCustomerDto);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.CREATED).json(result);
@@ -69,10 +69,10 @@ export class DestinationsController {
         message: translatedMessage,
       };
 
-      switch (result.error as DestinationErrors) {
-        case DestinationErrors.DESTINATION_COUNTRY_ALREADY_EXISTS:
+      switch (result.error as CustomerErrors) {
+        case CustomerErrors.CUSTOMER_ALREADY_EXISTS:
           return res.status(HttpStatus.CONFLICT).json(errorResponse);
-        case DestinationErrors.INVALID_DESTINATION_DATA:
+        case CustomerErrors.INVALID_CUSTOMER_DATA:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
@@ -83,30 +83,29 @@ export class DestinationsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Liste de toutes les destinations (Public)' })
+  @ApiOperation({ summary: 'Get all customers' })
   @ApiResponse({
     status: 200,
-    description: 'Liste des destinations',
-    type: [DestinationResponseDto],
+    description: 'List of customers',
+    type: [CustomerResponseDto],
   })
   async findAll() {
-    return this.destinationsService.findAll();
+    return this.customersService.findAll();
   }
 
   @Get(':id')
-  @UseGuards(UserLanguageGuard)
-  @ApiOperation({ summary: 'Récupérer une destination par ID (Public)' })
+  @ApiOperation({ summary: 'Get customer by ID' })
   @ApiResponse({
     status: 200,
-    description: 'Destination trouvée',
-    type: DestinationResponseDto,
+    description: 'Customer found',
+    type: CustomerResponseDto,
   })
   async findById(
     @Param('id') id: string,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.destinationsService.findById(id);
+    const result = await this.customersService.findById(id);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
@@ -119,37 +118,24 @@ export class DestinationsController {
         message: translatedMessage,
       };
 
-      switch (result.error as DestinationErrors) {
-        case DestinationErrors.DESTINATION_NOT_FOUND:
-          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        default:
-          return res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .json(errorResponse);
-      }
+      return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
     }
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
-  @Roles(UserRole.AGENT, UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Mettre à jour une destination' })
+  @ApiOperation({ summary: 'Update a customer' })
   @ApiResponse({
     status: 200,
-    description: 'Destination mise à jour',
-    type: DestinationResponseDto,
+    description: 'Customer updated',
+    type: CustomerResponseDto,
   })
   async update(
     @Param('id') id: string,
-    @Body() updateDestinationDto: UpdateDestinationDto,
+    @Body() updateCustomerDto: UpdateCustomerDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.destinationsService.update(
-      id,
-      updateDestinationDto,
-    );
+    const result = await this.customersService.update(id, updateCustomerDto);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
@@ -162,12 +148,10 @@ export class DestinationsController {
         message: translatedMessage,
       };
 
-      switch (result.error as DestinationErrors) {
-        case DestinationErrors.DESTINATION_NOT_FOUND:
+      switch (result.error as CustomerErrors) {
+        case CustomerErrors.CUSTOMER_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case DestinationErrors.DESTINATION_COUNTRY_ALREADY_EXISTS:
-          return res.status(HttpStatus.CONFLICT).json(errorResponse);
-        case DestinationErrors.INVALID_DESTINATION_DATA:
+        case CustomerErrors.INVALID_CUSTOMER_DATA:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
@@ -178,21 +162,17 @@ export class DestinationsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
-  @Roles(UserRole.AGENT, UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Supprimer une destination' })
+  @ApiOperation({ summary: 'Delete a customer' })
   @ApiResponse({
     status: 200,
-    description: 'Destination supprimée',
-    type: DestinationResponseDto,
+    description: 'Customer deleted',
   })
   async delete(
     @Param('id') id: string,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.destinationsService.delete(id);
+    const result = await this.customersService.delete(id);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
@@ -205,34 +185,22 @@ export class DestinationsController {
         message: translatedMessage,
       };
 
-      switch (result.error as DestinationErrors) {
-        case DestinationErrors.DESTINATION_NOT_FOUND:
-          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        default:
-          return res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .json(errorResponse);
-      }
+      return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
     }
   }
 
   @Delete()
-  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
-  @Roles(UserRole.AGENT, UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Supprimer plusieurs destinations' })
+  @ApiOperation({ summary: 'Delete multiple customers' })
   @ApiResponse({
     status: 200,
-    description: 'Destinations supprimées',
+    description: 'Customers deleted',
   })
   async deleteMany(
-    @Body() deleteDestinationsDto: DeleteDestinationsDto,
+    @Body() deleteCustomersDto: DeleteCustomersDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.destinationsService.deleteMany(
-      deleteDestinationsDto,
-    );
+    const result = await this.customersService.deleteMany(deleteCustomersDto);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
@@ -245,14 +213,7 @@ export class DestinationsController {
         message: translatedMessage,
       };
 
-      switch (result.error as DestinationErrors) {
-        case DestinationErrors.INVALID_DESTINATION_DATA:
-          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        default:
-          return res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .json(errorResponse);
-      }
+      return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
     }
   }
 }
