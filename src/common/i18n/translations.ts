@@ -27,6 +27,16 @@ export const translations = {
     REGISTRATION_FAILED: "Échec de l'inscription",
     WEAK_PASSWORD: 'Le mot de passe est trop faible',
     INVALID_EMAIL_FORMAT: "Format d'email invalide",
+
+    // Destination Errors
+    DESTINATION_NOT_FOUND: 'Destination introuvable',
+    DESTINATION_ALREADY_EXISTS: 'Cette destination existe déjà',
+    INVALID_DESTINATION_DATA: 'Données destination invalides',
+    DESTINATION_COUNTRY_ALREADY_EXISTS: 'Ce pays existe déjà comme destination',
+    DESTINATION_UPDATE_FAILED: 'Échec de la mise à jour de la destination',
+    DESTINATION_DELETE_FAILED: 'Échec de la suppression de la destination',
+    DESTINATION_CREATION_FAILED: 'Échec de la création de la destination',
+    INVALID_DESTINATION_ID: 'Identifiant destination invalide',
   },
   en: {
     // User Errors
@@ -56,5 +66,15 @@ export const translations = {
     REGISTRATION_FAILED: 'Registration failed',
     WEAK_PASSWORD: 'Password is too weak',
     INVALID_EMAIL_FORMAT: 'Invalid email format',
+
+    // Destination Errors
+    DESTINATION_NOT_FOUND: 'Destination not found',
+    DESTINATION_ALREADY_EXISTS: 'Destination already exists',
+    INVALID_DESTINATION_DATA: 'Invalid destination data',
+    DESTINATION_COUNTRY_ALREADY_EXISTS: 'This country already exists as a destination',
+    DESTINATION_UPDATE_FAILED: 'Destination update failed',
+    DESTINATION_DELETE_FAILED: 'Destination deletion failed',
+    DESTINATION_CREATION_FAILED: 'Destination creation failed',
+    INVALID_DESTINATION_ID: 'Invalid destination ID',
   },
 };

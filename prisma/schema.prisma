@@ -28,7 +28,7 @@ model User {
   password   String
   firstName  String?  @map("first_name")
   lastName   String?  @map("last_name")
-  role       UserRole @default(USER)
+  role       UserRole @default(CLIENT)
   isActive   Boolean  @default(true) @map("is_active")
   languageId String   @default("en") @map("language_id")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -41,8 +41,19 @@ model User {
 }
 
 enum UserRole {
-  USER
+  CLIENT
+  AGENT
   ADMIN
+}
+
+model Destination {
+  id          String   @id @default(uuid())
+  country     String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("destinations")
 }
 
 model Booking {

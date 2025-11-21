@@ -14,6 +14,6 @@ export class CreateUserDto {
   @ApiPropertyOptional({ example: 'Doe' })
   lastName?: string;
 
-  @ApiPropertyOptional({ enum: UserRole, example: UserRole.USER })
+  @ApiPropertyOptional({ enum: UserRole, example: UserRole.CLIENT })
   role?: UserRole;
 }
