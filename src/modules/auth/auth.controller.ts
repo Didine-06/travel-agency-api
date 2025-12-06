@@ -5,19 +5,23 @@ import {
   HttpStatus,
   Res,
   UseGuards,
+  Get,
+  Patch,
+  Param,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, AuthResponseDto } from './dtos';
+import { LoginDto, RegisterDto, AuthResponseDto, UpdateProfileDto } from './dtos';
 import { AuthErrors } from './enums';
 import { UserLanguage } from '../../common/decorators/user-language.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { I18nService } from '../../common/i18n';
 import { UserLanguageGuard } from '../../common/guards/user-language.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
-@UseGuards(UserLanguageGuard)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -25,6 +29,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @UseGuards(UserLanguageGuard)
   @ApiOperation({ summary: "Inscription d'un nouvel utilisateur" })
   @ApiResponse({
     status: 201,
@@ -69,6 +74,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(UserLanguageGuard)
   @ApiOperation({ summary: 'Connexion utilisateur' })
   @ApiResponse({
     status: 200,
@@ -105,5 +111,62 @@ export class AuthController {
             .json(errorResponse);
       }
     }
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Récupérer les informations de l\'utilisateur connecté' })
+  @ApiResponse({
+    status: 200,
+    description: 'Informations utilisateur récupérées',
+  })
+  @ApiResponse({ status: 401, description: 'Non autorisé' })
+  async getMe(
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
+    const result = await this.authService.getMe(user.userId);
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    return res.status(HttpStatus.UNAUTHORIZED).json(result);
+  }
+
+  @Patch('profile/:userId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Éditer le profil utilisateur' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profil mis à jour avec succès',
+  })
+  @ApiResponse({ status: 401, description: 'Non autorisé' })
+  @ApiResponse({ status: 404, description: 'Utilisateur introuvable' })
+  async updateProfile(
+    @Param('userId') userId: string,
+    @Body() updateProfileDto: UpdateProfileDto,
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
+    // Vérifier que l'utilisateur modifie son propre profil ou est admin
+    if (user.userId !== userId && user.role !== 'ADMIN') {
+      return res.status(HttpStatus.FORBIDDEN).json({
+        isSuccess: false,
+        isError: true,
+        error: AuthErrors.FORBIDDEN,
+        message: 'Vous ne pouvez modifier que votre propre profil',
+      });
+    }
+
+    const result = await this.authService.updateProfile(userId, updateProfileDto);
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    return res.status(HttpStatus.NOT_FOUND).json(result);
   }
 }

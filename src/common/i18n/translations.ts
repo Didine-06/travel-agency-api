@@ -25,6 +25,7 @@ export const translations = {
     FORBIDDEN: 'Accès interdit',
     EMAIL_ALREADY_EXISTS: 'Cet email est déjà utilisé',
     REGISTRATION_FAILED: "Échec de l'inscription",
+    REGISTRATION_SUCCESS: 'Inscription réussie',
     WEAK_PASSWORD: 'Le mot de passe est trop faible',
     INVALID_EMAIL_FORMAT: "Format d'email invalide",
 
@@ -64,6 +65,7 @@ export const translations = {
     FORBIDDEN: 'Forbidden',
     EMAIL_ALREADY_EXISTS: 'This email is already in use',
     REGISTRATION_FAILED: 'Registration failed',
+    REGISTRATION_SUCCESS: 'Registration successful',
     WEAK_PASSWORD: 'Password is too weak',
     INVALID_EMAIL_FORMAT: 'Invalid email format',
 

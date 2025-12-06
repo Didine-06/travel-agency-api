@@ -19,6 +19,9 @@ export class CreatePackageDto {
   @ApiPropertyOptional({ example: ['Hotel', 'Meals', 'Tours'] })
   includedServices?: string[];
 
+  @ApiPropertyOptional({ example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'] })
+  imagesUrls?: string[];
+
   @ApiProperty({ example: '2024-06-01T00:00:00.000Z' })
   availableFrom: Date;
 

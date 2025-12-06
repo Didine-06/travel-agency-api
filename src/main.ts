@@ -2,12 +2,21 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AllExceptionsFilter } from './common/all-exeptions-filter';
+
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './common/logger.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+     logger: WinstonModule.createLogger(winstonConfig),
+  });
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Enable CORS
   app.enableCors();
+
 
   // Swagger Configuration
   const config = new DocumentBuilder()

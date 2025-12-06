@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersRepository } from '../users/repository/users.repository';
-import { LoginDto, RegisterDto, AuthResponseDto } from './dtos';
+import { LoginDto, RegisterDto, AuthResponseDto, UpdateProfileDto } from './dtos';
 import { ApiResponse, ErrorResponse } from '../../common/helpers';
 import { AuthErrors } from './enums';
 import * as bcrypt from 'bcrypt';
@@ -22,25 +22,24 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+    
+    const { phone, address, city, country, dateOfBirth, ...userData } = registerDto;
+    
     const user = await this.usersRepository.create({
-      ...registerDto,
+      ...userData,
       password: hashedPassword,
+      customer: {
+        create: {
+          phone,
+          address,
+          city,
+          country,
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        },
+      },
     });
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
-    const accessToken = this.jwtService.sign(payload);
-
-    const authResponse: AuthResponseDto = {
-      accessToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      },
-    };
-
-    return ApiResponse(authResponse);
+    return ApiResponse({ message: AuthErrors.REGISTRATION_SUCCESS });
   }
 
   async login(loginDto: LoginDto) {
@@ -69,8 +68,13 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        role: user.role,
         firstName: user.firstName || undefined,
         lastName: user.lastName || undefined,
+        phone: user.customer?.phone || undefined,
+        address: user.customer?.address || undefined,
+        dateOfBirth: user.customer?.dateOfBirth || undefined,
+        customerId: user.customer?.id || undefined,
       },
     };
 
@@ -83,5 +87,113 @@ export class AuthService {
       return ErrorResponse(AuthErrors.USER_NOT_FOUND);
     }
     return ApiResponse(user);
+  }
+
+  async getMe(userId: string) {
+    const user = await this.usersRepository.findByEmail(
+      (await this.usersRepository.findById(userId))?.email || '',
+    );
+
+    if (!user || !user.isActive) {
+      return ErrorResponse(AuthErrors.USER_NOT_FOUND);
+    }
+
+    // Si l'utilisateur est ADMIN ou AGENT, on ne retourne pas les infos customer
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
+      isActive: user.isActive,
+      languageId: user.languageId,
+      customer:
+        user.role === 'CLIENT' && user.customer
+          ? {
+              id: user.customer.id,
+              phone: user.customer.phone,
+              address: user.customer.address,
+              dateOfBirth: user.customer.dateOfBirth,
+            }
+          : null,
+    };
+
+    return ApiResponse(userResponse);
+  }
+
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    const user = await this.usersRepository.findById(userId);
+
+    if (!user) {
+      return ErrorResponse(AuthErrors.USER_NOT_FOUND);
+    }
+
+    // Séparer les données customer des données user
+    const { phone, address, city, country, dateOfBirth, ...userData } = updateProfileDto;
+
+    try {
+      // Si c'est un CLIENT et qu'il y a des données customer
+      if (user.role === 'CLIENT' && (phone !== undefined || address !== undefined || city !== undefined || country !== undefined || dateOfBirth !== undefined)) {
+        // Mettre à jour l'utilisateur avec les données customer
+        const updatedUser = await this.usersRepository.update(userId, {
+          ...userData,
+          customer: {
+            upsert: {
+              create: {
+                phone,
+                address,
+                city,
+                country,
+                dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+              },
+              update: {
+                ...(phone !== undefined && { phone }),
+                ...(address !== undefined && { address }),
+                ...(city !== undefined && { city }),
+                ...(country !== undefined && { country }),
+                ...(dateOfBirth !== undefined && { dateOfBirth: new Date(dateOfBirth) }),
+              },
+            },
+          },
+        });
+
+        // Récupérer l'utilisateur mis à jour avec les infos customer
+        const userWithCustomer = await this.usersRepository.findByEmail(updatedUser.email);
+
+        return ApiResponse({
+          id: userWithCustomer.id,
+          email: userWithCustomer.email,
+          role: userWithCustomer.role,
+          firstName: userWithCustomer.firstName,
+          lastName: userWithCustomer.lastName,
+          isActive: userWithCustomer.isActive,
+          languageId: userWithCustomer.languageId,
+          customer: userWithCustomer.customer ? {
+            id: userWithCustomer.customer.id,
+            phone: userWithCustomer.customer.phone,
+            address: userWithCustomer.customer.address,
+            city: userWithCustomer.customer.city,
+            country: userWithCustomer.customer.country,
+            dateOfBirth: userWithCustomer.customer.dateOfBirth,
+          } : null,
+        });
+      } else {
+        // Mettre à jour uniquement les données user (ADMIN/AGENT)
+        const updatedUser = await this.usersRepository.update(userId, userData);
+
+        return ApiResponse({
+          id: updatedUser.id,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          isActive: updatedUser.isActive,
+          languageId: updatedUser.languageId,
+          customer: null,
+        });
+      }
+    } catch (error) {
+      return ErrorResponse(AuthErrors.USER_UPDATE_FAILED);
+    }
   }
 }

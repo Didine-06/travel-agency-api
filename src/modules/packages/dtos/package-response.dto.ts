@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Destination } from '@prisma/client';
+import { DestinationResponseDto } from 'src/modules/destinations/dtos';
 
 export class PackageResponseDto {
   @ApiProperty()
@@ -22,6 +24,9 @@ export class PackageResponseDto {
   @ApiPropertyOptional()
   includedServices?: any;
 
+  @ApiPropertyOptional()
+  imagesUrls?: any;
+
   @ApiProperty()
   availableFrom: Date;
 
@@ -33,6 +38,9 @@ export class PackageResponseDto {
 
   @ApiProperty()
   isActive: boolean;
+
+  @ApiProperty()
+  destination: DestinationResponseDto;
 
   @ApiProperty()
   createdAt: Date;

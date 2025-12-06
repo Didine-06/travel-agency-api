@@ -34,9 +34,7 @@ import { I18nService } from '../../common/i18n';
 import { UserLanguageGuard } from '../../common/guards/user-language.guard';
 
 @ApiTags('Packages')
-@ApiBearerAuth('JWT-auth')
 @Controller('packages')
-@UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
 export class PackagesController {
   constructor(
     private readonly packagesService: PackagesService,
@@ -44,7 +42,9 @@ export class PackagesController {
   ) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new package' })
   @ApiResponse({
     status: 201,
@@ -80,7 +80,7 @@ export class PackagesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all packages' })
+  @ApiOperation({ summary: 'Get all packages (public)' })
   @ApiResponse({
     status: 200,
     description: 'List of packages',
@@ -91,7 +91,7 @@ export class PackagesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get package by ID' })
+  @ApiOperation({ summary: 'Get package by ID (public)' })
   @ApiResponse({
     status: 200,
     description: 'Package found',
@@ -116,7 +116,9 @@ export class PackagesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a package' })
   @ApiResponse({
     status: 200,
@@ -152,7 +154,9 @@ export class PackagesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a package' })
   @ApiResponse({
     status: 200,
@@ -176,7 +180,9 @@ export class PackagesController {
   }
 
   @Delete()
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete multiple packages' })
   @ApiResponse({
     status: 200,
