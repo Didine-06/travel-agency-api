@@ -74,6 +74,8 @@ export class AuthService {
         phone: user.customer?.phone || undefined,
         address: user.customer?.address || undefined,
         dateOfBirth: user.customer?.dateOfBirth || undefined,
+        city: user.customer?.city || undefined,
+        country: user.customer?.country || undefined,
         customerId: user.customer?.id || undefined,
       },
     };
@@ -114,6 +116,8 @@ export class AuthService {
               phone: user.customer.phone,
               address: user.customer.address,
               dateOfBirth: user.customer.dateOfBirth,
+              city : user.customer.city,
+              country : user.customer.country,
             }
           : null,
     };
@@ -152,6 +156,8 @@ export class AuthService {
                 ...(city !== undefined && { city }),
                 ...(country !== undefined && { country }),
                 ...(dateOfBirth !== undefined && { dateOfBirth: new Date(dateOfBirth) }),
+                ...(city !== undefined && { city }),
+                ...(country !== undefined && { country }),
               },
             },
           },

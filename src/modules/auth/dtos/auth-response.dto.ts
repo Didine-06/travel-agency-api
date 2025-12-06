@@ -26,6 +26,12 @@ class UserInfo {
   dateOfBirth?: Date;
 
   @ApiProperty({ required: false })
+  city?: string;
+
+  @ApiProperty({ required: false })
+  country?: string;
+
+  @ApiProperty({ required: false })
   customerId?: string;
 }
 
