@@ -34,4 +34,24 @@ export class BookingResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  static fromEntity(booking: any): BookingResponseDto {
+    return {
+      id: booking.id,
+      customerId: booking.customerId,
+      packageId: booking.packageId,
+      numberOfAdults: booking.numberOfAdults,
+      numberOfChildren: booking.numberOfChildren,
+      totalPrice: booking.totalPrice,
+      bookingDate: booking.bookingDate,
+      travelDate: booking.travelDate,
+      status: booking.status,
+      createdAt: booking.createdAt,
+      updatedAt: booking.updatedAt,
+    };
+  }
+
+  static fromEntities(bookings: any[]): BookingResponseDto[] {
+    return bookings.map(booking => this.fromEntity(booking));
+  }
 }

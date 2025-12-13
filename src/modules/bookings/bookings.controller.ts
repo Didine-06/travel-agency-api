@@ -23,10 +23,15 @@ import {
   BookingResponseDto,
   UpdateBookingDto,
   DeleteBookingsDto,
+  CreateMyBookingDto,
+  UpdateMyBookingDto,
+  BookingListResponseDto,
+  BookingDetailResponseDto,
 } from './dtos';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 import { BookingErrors } from './enums';
 import { UserLanguage } from '../../common/decorators/user-language.decorator';
@@ -44,8 +49,8 @@ export class BookingsController {
   ) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.AGENT, UserRole.CLIENT)
-  @ApiOperation({ summary: 'Create a new booking' })
+  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @ApiOperation({ summary: 'Create a new booking (Admin/Agent)' })
   @ApiResponse({
     status: 201,
     description: 'Booking created',
@@ -85,25 +90,149 @@ export class BookingsController {
     }
   }
 
+  @Post('my-booking')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Create a booking for current customer' })
+  @ApiResponse({
+    status: 201,
+    description: 'Booking created',
+    type: BookingResponseDto,
+  })
+  async createMyBooking(
+    @CurrentUser() user: any,
+    @Body() createMyBookingDto: CreateMyBookingDto,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.bookingsService.createMyBooking(
+      user.userId,
+      createMyBookingDto,
+    );
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.CREATED).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as BookingErrors) {
+        case BookingErrors.CUSTOMER_NOT_FOUND:
+        case BookingErrors.PACKAGE_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        case BookingErrors.INVALID_BOOKING_DATA:
+          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        case BookingErrors.PACKAGE_NOT_AVAILABLE:
+          return res.status(HttpStatus.CONFLICT).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
   @Get()
   @Roles(UserRole.ADMIN, UserRole.AGENT)
   @ApiOperation({ summary: 'Get all bookings' })
   @ApiResponse({
     status: 200,
     description: 'List of bookings',
-    type: [BookingResponseDto],
+    type: [BookingListResponseDto],
   })
   async findAll() {
     return this.bookingsService.findAll();
   }
 
+  @Get('my-bookings')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Get bookings for the current customer' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of customer bookings',
+    type: [BookingListResponseDto],
+  })
+  async getMyBookings(
+    @CurrentUser() user: any,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.bookingsService.findByUserId(user.userId);
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as BookingErrors) {
+        case BookingErrors.CUSTOMER_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
+  @Get('my-booking/:id')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Get a specific booking for the current customer' })
+  @ApiResponse({
+    status: 200,
+    description: 'Booking details',
+    type: BookingDetailResponseDto,
+  })
+  async getMyBooking(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.bookingsService.findMyBooking(user.userId, id);
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as BookingErrors) {
+        case BookingErrors.BOOKING_NOT_FOUND:
+        case BookingErrors.CUSTOMER_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        case BookingErrors.UNAUTHORIZED_ACCESS:
+          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.AGENT, UserRole.CLIENT)
-  @ApiOperation({ summary: 'Get booking by ID' })
+  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @ApiOperation({ summary: 'Get booking by ID (Admin/Agent)' })
   @ApiResponse({
     status: 200,
     description: 'Booking found',
-    type: BookingResponseDto,
+    type: BookingDetailResponseDto,
   })
   async findById(
     @Param('id') id: string,
@@ -127,9 +256,57 @@ export class BookingsController {
     }
   }
 
+  @Patch('my-booking/:id')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Update own booking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Booking updated',
+    type: BookingResponseDto,
+  })
+  async updateMyBooking(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() updateMyBookingDto: UpdateMyBookingDto,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.bookingsService.updateMyBooking(
+      user.userId,
+      id,
+      updateMyBookingDto,
+    );
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as BookingErrors) {
+        case BookingErrors.BOOKING_NOT_FOUND:
+        case BookingErrors.CUSTOMER_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        case BookingErrors.INVALID_BOOKING_DATA:
+          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        case BookingErrors.UNAUTHORIZED_ACCESS:
+          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Update a booking' })
+  @ApiOperation({ summary: 'Update a booking (Admin/Agent)' })
   @ApiResponse({
     status: 200,
     description: 'Booking updated',

@@ -38,6 +38,19 @@ export const translations = {
     DESTINATION_DELETE_FAILED: 'Échec de la suppression de la destination',
     DESTINATION_CREATION_FAILED: 'Échec de la création de la destination',
     INVALID_DESTINATION_ID: 'Identifiant destination invalide',
+
+    // Booking Errors
+    BOOKING_NOT_FOUND: 'Réservation introuvable',
+    INVALID_BOOKING_DATA: 'Données de réservation invalides',
+    BOOKING_CREATION_FAILED: 'Échec de la création de la réservation',
+    BOOKING_UPDATE_FAILED: 'Échec de la mise à jour de la réservation',
+    BOOKING_DELETE_FAILED: 'Échec de la suppression de la réservation',
+    PACKAGE_NOT_AVAILABLE: 'Package non disponible',
+    PACKAGE_NOT_FOUND: 'Package introuvable',
+    CUSTOMER_NOT_FOUND: 'Client introuvable',
+    INVALID_BOOKING_STATUS: 'Statut de réservation invalide',
+    CANNOT_CANCEL_BOOKING: 'Impossible d\'annuler cette réservation',
+    UNAUTHORIZED_ACCESS: 'Vous n\'êtes pas autorisé à accéder à cette réservation',
   },
   en: {
     // User Errors
@@ -78,5 +91,18 @@ export const translations = {
     DESTINATION_DELETE_FAILED: 'Destination deletion failed',
     DESTINATION_CREATION_FAILED: 'Destination creation failed',
     INVALID_DESTINATION_ID: 'Invalid destination ID',
+
+    // Booking Errors
+    BOOKING_NOT_FOUND: 'Booking not found',
+    INVALID_BOOKING_DATA: 'Invalid booking data',
+    BOOKING_CREATION_FAILED: 'Booking creation failed',
+    BOOKING_UPDATE_FAILED: 'Booking update failed',
+    BOOKING_DELETE_FAILED: 'Booking deletion failed',
+    PACKAGE_NOT_AVAILABLE: 'Package not available',
+    PACKAGE_NOT_FOUND: 'Package not found',
+    CUSTOMER_NOT_FOUND: 'Customer not found',
+    INVALID_BOOKING_STATUS: 'Invalid booking status',
+    CANNOT_CANCEL_BOOKING: 'Cannot cancel this booking',
+    UNAUTHORIZED_ACCESS: 'You are not authorized to access this booking',
   },
 };

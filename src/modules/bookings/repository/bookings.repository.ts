@@ -92,6 +92,33 @@ export class BookingsRepository {
     });
   }
 
+  async findByCustomerId(customerId: string): Promise<Booking[]> {
+    return await this.prisma.booking.findMany({
+      where: { customerId },
+      include: {
+        customer: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        package: {
+          include: {
+            destination: true,
+          },
+        },
+        payments: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async update(id: string, data: Prisma.BookingUpdateInput): Promise<Booking> {
     return await this.prisma.booking.update({
       where: { id },

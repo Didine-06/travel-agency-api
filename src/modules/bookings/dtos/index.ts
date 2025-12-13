@@ -2,3 +2,7 @@ export * from './create-booking.dto';
 export * from './update-booking.dto';
 export * from './booking-response.dto';
 export * from './delete-bookings.dto';
+export * from './create-my-booking.dto';
+export * from './update-my-booking.dto';
+export * from './booking-list-response.dto';
+export * from './booking-detail-response.dto';

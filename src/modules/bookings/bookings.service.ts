@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { BookingsRepository } from './repository/bookings.repository';
-import { CreateBookingDto, UpdateBookingDto, DeleteBookingsDto } from './dtos';
+import { 
+  CreateBookingDto, 
+  UpdateBookingDto, 
+  DeleteBookingsDto, 
+  CreateMyBookingDto, 
+  UpdateMyBookingDto,
+  BookingResponseDto,
+  BookingListResponseDto,
+  BookingDetailResponseDto
+} from './dtos';
 import { ApiResponse, ErrorResponse } from '../../common/helpers';
 import { BookingErrors } from './enums';
 import { CustomersRepository } from '../customers/repository/customers.repository';
@@ -37,7 +46,91 @@ export class BookingsService {
 
   async findAll() {
     const bookings = await this.bookingsRepository.findAll();
-    return ApiResponse(bookings);
+    return ApiResponse(BookingListResponseDto.fromEntities(bookings));
+  }
+
+  async findByUserId(userId: string) {
+    // Récupérer le customer associé au user
+    const customer = await this.customersRepository.findByUserId(userId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    // Récupérer tous les bookings du customer
+    const bookings = await this.bookingsRepository.findByCustomerId(customer.id);
+    return ApiResponse(BookingListResponseDto.fromEntities(bookings));
+  }
+
+  public async findMyBooking(userId: string, bookingId: string) {
+    // Récupérer le customer associé au user
+    const customer = await this.customersRepository.findByUserId(userId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    // Récupérer la réservation
+    const booking = await this.bookingsRepository.findById(bookingId);
+    if (!booking) {
+      return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
+    }
+
+    // Vérifier que la réservation appartient bien au customer
+    if (booking.customerId !== customer.id) {
+      return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
+    }
+
+    return ApiResponse(BookingDetailResponseDto.fromEntity(booking));
+  }
+
+  async createMyBooking(userId: string, createMyBookingDto: CreateMyBookingDto) {
+    // Récupérer le customer associé au user
+    const customer = await this.customersRepository.findByUserId(userId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    // Vérifier si le package existe
+    const packageData = await this.packagesRepository.findById(
+      createMyBookingDto.packageId,
+    );
+    if (!packageData) {
+      return ErrorResponse(BookingErrors.PACKAGE_NOT_FOUND);
+    }
+
+    // Créer la réservation avec le customerId récupéré
+    const createBookingDto: CreateBookingDto = {
+      ...createMyBookingDto,
+      customerId: customer.id,
+    };
+
+    const booking = await this.bookingsRepository.create(createBookingDto);
+    return ApiResponse(BookingResponseDto.fromEntity(booking));
+  }
+
+  async updateMyBooking(userId: string, bookingId: string, updateMyBookingDto: UpdateMyBookingDto) {
+    // Récupérer le customer associé au user
+    const customer = await this.customersRepository.findByUserId(userId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    // Vérifier si la réservation existe
+    const existingBooking = await this.bookingsRepository.findById(bookingId);
+    if (!existingBooking) {
+      return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
+    }
+
+    // Vérifier que la réservation appartient bien au customer
+    if (existingBooking.customerId !== customer.id) {
+      return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
+    }
+
+    // Mettre à jour la réservation
+    const updatedBooking = await this.bookingsRepository.update(
+      bookingId,
+      updateMyBookingDto,
+    );
+    return ApiResponse(BookingResponseDto.fromEntity(updatedBooking));
   }
 
   async findById(id: string) {
@@ -46,7 +139,7 @@ export class BookingsService {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
     }
 
-    return ApiResponse(booking);
+    return ApiResponse(BookingDetailResponseDto.fromEntity(booking));
   }
 
   async update(id: string, updateBookingDto: UpdateBookingDto) {
@@ -59,7 +152,7 @@ export class BookingsService {
       id,
       updateBookingDto,
     );
-    return ApiResponse(updatedBooking);
+    return ApiResponse(BookingResponseDto.fromEntity(updatedBooking));
   }
 
   async delete(id: string) {
@@ -69,7 +162,7 @@ export class BookingsService {
     }
 
     const deletedBooking = await this.bookingsRepository.delete(id);
-    return ApiResponse(deletedBooking);
+    return ApiResponse(BookingResponseDto.fromEntity(deletedBooking));
   }
 
   async deleteMany(deleteBookingsDto: DeleteBookingsDto) {
