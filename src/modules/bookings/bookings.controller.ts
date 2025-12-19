@@ -278,7 +278,11 @@ export class BookingsController {
     );
 
     if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
+      const message = this.i18n.translate('BOOKING_UPDATED_SUCCESSFULLY', lang);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message,
+      });
     }
 
     if (result.isError && 'error' in result) {
@@ -294,6 +298,99 @@ export class BookingsController {
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
         case BookingErrors.INVALID_BOOKING_DATA:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        case BookingErrors.UNAUTHORIZED_ACCESS:
+          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
+  @Delete('my-booking/:id')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Delete own booking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Booking deleted',
+  })
+  async deleteMyBooking(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.bookingsService.deleteMyBooking(user.userId, id);
+
+    if (result.isSuccess) {
+      const message = this.i18n.translate('BOOKING_DELETED_SUCCESSFULLY', lang);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message,
+      });
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as BookingErrors) {
+        case BookingErrors.BOOKING_NOT_FOUND:
+        case BookingErrors.CUSTOMER_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        case BookingErrors.UNAUTHORIZED_ACCESS:
+          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
+  @Delete('my-bookings')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Delete multiple own bookings' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bookings deleted',
+  })
+  async deleteMyBookings(
+    @CurrentUser() user: any,
+    @Body() deleteBookingsDto: DeleteBookingsDto,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.bookingsService.deleteMyBookings(
+      user.userId,
+      deleteBookingsDto,
+    );
+
+    if (result.isSuccess && 'data' in result) {
+      const message = this.i18n.translate('BOOKINGS_DELETED_SUCCESSFULLY', lang);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message,
+        count: result.data.count,
+      });
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as BookingErrors) {
+        case BookingErrors.INVALID_BOOKING_DATA:
+          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        case BookingErrors.CUSTOMER_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
         case BookingErrors.UNAUTHORIZED_ACCESS:
           return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
         default:
@@ -321,7 +418,11 @@ export class BookingsController {
     const result = await this.bookingsService.update(id, updateBookingDto);
 
     if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
+      const message = this.i18n.translate('BOOKING_UPDATED_SUCCESSFULLY', lang);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message,
+      });
     }
 
     if (result.isError && 'error' in result) {
@@ -359,7 +460,11 @@ export class BookingsController {
     const result = await this.bookingsService.delete(id);
 
     if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
+      const message = this.i18n.translate('BOOKING_DELETED_SUCCESSFULLY', lang);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message,
+      });
     }
 
     if (result.isError && 'error' in result) {
@@ -387,8 +492,13 @@ export class BookingsController {
   ) {
     const result = await this.bookingsService.deleteMany(deleteBookingsDto);
 
-    if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
+    if (result.isSuccess && 'data' in result) {
+      const message = this.i18n.translate('BOOKINGS_DELETED_SUCCESSFULLY', lang);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message,
+        count: result.data.count,
+      });
     }
 
     if (result.isError && 'error' in result) {

@@ -126,11 +126,62 @@ export class BookingsService {
     }
 
     // Mettre à jour la réservation
-    const updatedBooking = await this.bookingsRepository.update(
+    await this.bookingsRepository.update(
       bookingId,
       updateMyBookingDto,
     );
-    return ApiResponse(BookingResponseDto.fromEntity(updatedBooking));
+    return ApiResponse({});
+  }
+
+  async deleteMyBooking(userId: string, bookingId: string) {
+    // Récupérer le customer associé au user
+    const customer = await this.customersRepository.findByUserId(userId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    // Vérifier si la réservation existe
+    const existingBooking = await this.bookingsRepository.findById(bookingId);
+    if (!existingBooking) {
+      return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
+    }
+
+    // Vérifier que la réservation appartient bien au customer
+    if (existingBooking.customerId !== customer.id) {
+      return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
+    }
+
+    // Supprimer la réservation
+    await this.bookingsRepository.delete(bookingId);
+    return ApiResponse({});
+  }
+
+  async deleteMyBookings(userId: string, deleteBookingsDto: DeleteBookingsDto) {
+    const { ids } = deleteBookingsDto;
+
+    if (!ids || ids.length === 0) {
+      return ErrorResponse(BookingErrors.INVALID_BOOKING_DATA);
+    }
+
+    // Récupérer le customer associé au user
+    const customer = await this.customersRepository.findByUserId(userId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    // Vérifier que toutes les réservations appartiennent au customer
+    const bookings = await this.bookingsRepository.findByIds(ids);
+    const unauthorizedBooking = bookings.find(
+      (booking) => booking.customerId !== customer.id,
+    );
+
+    if (unauthorizedBooking) {
+      return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
+    }
+
+    // Supprimer les réservations
+    const result = await this.bookingsRepository.deleteMany(ids);
+    return ApiResponse({ count: result.count });
   }
 
   async findById(id: string) {
@@ -148,11 +199,11 @@ export class BookingsService {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
     }
 
-    const updatedBooking = await this.bookingsRepository.update(
+    await this.bookingsRepository.update(
       id,
       updateBookingDto,
     );
-    return ApiResponse(BookingResponseDto.fromEntity(updatedBooking));
+    return ApiResponse({});
   }
 
   async delete(id: string) {
@@ -161,8 +212,8 @@ export class BookingsService {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
     }
 
-    const deletedBooking = await this.bookingsRepository.delete(id);
-    return ApiResponse(BookingResponseDto.fromEntity(deletedBooking));
+    await this.bookingsRepository.delete(id);
+    return ApiResponse({});
   }
 
   async deleteMany(deleteBookingsDto: DeleteBookingsDto) {
@@ -173,6 +224,6 @@ export class BookingsService {
     }
 
     const result = await this.bookingsRepository.deleteMany(ids);
-    return ApiResponse({ deletedCount: result.count });
+    return ApiResponse({ count: result.count });
   }
 }

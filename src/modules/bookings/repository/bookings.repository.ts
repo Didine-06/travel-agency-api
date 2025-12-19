@@ -119,6 +119,16 @@ export class BookingsRepository {
     });
   }
 
+  async findByIds(ids: string[]): Promise<Booking[]> {
+    return await this.prisma.booking.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+  }
+
   async update(id: string, data: Prisma.BookingUpdateInput): Promise<Booking> {
     return await this.prisma.booking.update({
       where: { id },

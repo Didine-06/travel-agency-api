@@ -51,6 +51,9 @@ export const translations = {
     INVALID_BOOKING_STATUS: 'Statut de réservation invalide',
     CANNOT_CANCEL_BOOKING: 'Impossible d\'annuler cette réservation',
     UNAUTHORIZED_ACCESS: 'Vous n\'êtes pas autorisé à accéder à cette réservation',
+    BOOKING_DELETED_SUCCESSFULLY: 'Réservation supprimée avec succès',
+    BOOKINGS_DELETED_SUCCESSFULLY: 'Réservations supprimées avec succès',
+    BOOKING_UPDATED_SUCCESSFULLY: 'Réservation mise à jour avec succès',
   },
   en: {
     // User Errors
@@ -89,9 +92,6 @@ export const translations = {
     DESTINATION_COUNTRY_ALREADY_EXISTS: 'This country already exists as a destination',
     DESTINATION_UPDATE_FAILED: 'Destination update failed',
     DESTINATION_DELETE_FAILED: 'Destination deletion failed',
-    DESTINATION_CREATION_FAILED: 'Destination creation failed',
-    INVALID_DESTINATION_ID: 'Invalid destination ID',
-
     // Booking Errors
     BOOKING_NOT_FOUND: 'Booking not found',
     INVALID_BOOKING_DATA: 'Invalid booking data',
@@ -104,5 +104,9 @@ export const translations = {
     INVALID_BOOKING_STATUS: 'Invalid booking status',
     CANNOT_CANCEL_BOOKING: 'Cannot cancel this booking',
     UNAUTHORIZED_ACCESS: 'You are not authorized to access this booking',
+    BOOKING_DELETED_SUCCESSFULLY: 'Booking deleted successfully',
+    BOOKINGS_DELETED_SUCCESSFULLY: 'Bookings deleted successfully',
+    BOOKING_UPDATED_SUCCESSFULLY: 'Booking updated successfully',
   },
 };
+
