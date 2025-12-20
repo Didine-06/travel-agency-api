@@ -103,17 +103,20 @@ model Package {
 }
 
 model Booking {
-  id               String        @id @default(uuid())
-  customerId       String        @map("customer_id")
-  packageId        String        @map("package_id")
-  numberOfAdults   Int           @map("number_of_adults")
-  numberOfChildren Int           @default(0) @map("number_of_children")
-  totalPrice       Decimal       @map("total_price") @db.Decimal(10, 2)
-  bookingDate      DateTime      @default(now()) @map("booking_date")
-  travelDate       DateTime      @map("travel_date")
-  status           BookingStatus @default(PENDING)
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
+  id                   String        @id @default(uuid())
+  customerId            String        @map("customer_id")
+  packageId             String        @map("package_id")
+  numberOfAdults        Int           @map("number_of_adults")
+  numberOfChildren      Int           @default(0) @map("number_of_children")
+  totalPrice            Decimal       @db.Decimal(10, 2) @map("total_price")
+  bookingDate           DateTime      @default(now()) @map("booking_date")
+  travelDate            DateTime      @map("travel_date")
+  status                BookingStatus @default(PENDING)
+  cancelledAt           DateTime?     @map("cancelled_at")
+  cancellationReason    String?       @map("cancellation_reason")
+  updatedBy             String?       @map("updated_by")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
 
   customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   package  Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
@@ -121,6 +124,7 @@ model Booking {
 
   @@map("bookings")
 }
+
 
 enum BookingStatus {
   PENDING

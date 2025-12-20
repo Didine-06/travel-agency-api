@@ -8,12 +8,14 @@ import {
   UpdateMyBookingDto,
   BookingResponseDto,
   BookingListResponseDto,
-  BookingDetailResponseDto
+  BookingDetailResponseDto,
+  CancelBookingDto
 } from './dtos';
 import { ApiResponse, ErrorResponse } from '../../common/helpers';
 import { BookingErrors } from './enums';
 import { CustomersRepository } from '../customers/repository/customers.repository';
 import { PackagesRepository } from '../packages/repository/packages.repository';
+import { BookingStatus } from '@prisma/client';
 
 @Injectable()
 export class BookingsService {
@@ -23,8 +25,7 @@ export class BookingsService {
     private readonly packagesRepository: PackagesRepository,
   ) {}
 
-  async create(createBookingDto: CreateBookingDto) {
-    // Vérifier si le customer existe
+  public async create(createBookingDto: CreateBookingDto) {
     const customer = await this.customersRepository.findById(
       createBookingDto.customerId,
     );
@@ -32,7 +33,6 @@ export class BookingsService {
       return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
     }
 
-    // Vérifier si le package existe
     const packageData = await this.packagesRepository.findById(
       createBookingDto.packageId,
     );
@@ -44,37 +44,32 @@ export class BookingsService {
     return ApiResponse(booking);
   }
 
-  async findAll() {
+  public async findAll() {
     const bookings = await this.bookingsRepository.findAll();
     return ApiResponse(BookingListResponseDto.fromEntities(bookings));
   }
 
-  async findByUserId(userId: string) {
-    // Récupérer le customer associé au user
+  public async findByUserId(userId: string) {
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {
       return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
     }
 
-    // Récupérer tous les bookings du customer
     const bookings = await this.bookingsRepository.findByCustomerId(customer.id);
     return ApiResponse(BookingListResponseDto.fromEntities(bookings));
   }
 
   public async findMyBooking(userId: string, bookingId: string) {
-    // Récupérer le customer associé au user
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {
       return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
     }
 
-    // Récupérer la réservation
     const booking = await this.bookingsRepository.findById(bookingId);
     if (!booking) {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
     }
 
-    // Vérifier que la réservation appartient bien au customer
     if (booking.customerId !== customer.id) {
       return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
     }
@@ -82,14 +77,12 @@ export class BookingsService {
     return ApiResponse(BookingDetailResponseDto.fromEntity(booking));
   }
 
-  async createMyBooking(userId: string, createMyBookingDto: CreateMyBookingDto) {
-    // Récupérer le customer associé au user
+  public async createMyBooking(userId: string, createMyBookingDto: CreateMyBookingDto) {
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {
       return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
     }
 
-    // Vérifier si le package existe
     const packageData = await this.packagesRepository.findById(
       createMyBookingDto.packageId,
     );
@@ -97,7 +90,6 @@ export class BookingsService {
       return ErrorResponse(BookingErrors.PACKAGE_NOT_FOUND);
     }
 
-    // Créer la réservation avec le customerId récupéré
     const createBookingDto: CreateBookingDto = {
       ...createMyBookingDto,
       customerId: customer.id,
@@ -107,69 +99,70 @@ export class BookingsService {
     return ApiResponse(BookingResponseDto.fromEntity(booking));
   }
 
-  async updateMyBooking(userId: string, bookingId: string, updateMyBookingDto: UpdateMyBookingDto) {
-    // Récupérer le customer associé au user
+  public async updateMyBooking(userId: string, bookingId: string, updateMyBookingDto: UpdateMyBookingDto, user?: any) {
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {
       return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
     }
 
-    // Vérifier si la réservation existe
     const existingBooking = await this.bookingsRepository.findById(bookingId);
     if (!existingBooking) {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
     }
 
-    // Vérifier que la réservation appartient bien au customer
     if (existingBooking.customerId !== customer.id) {
       return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
     }
 
-    // Mettre à jour la réservation
+    const updatedByName = user?.firstName && user?.lastName 
+      ? `${user.firstName} ${user.lastName}`.trim()
+      : undefined;
+
     await this.bookingsRepository.update(
       bookingId,
-      updateMyBookingDto,
+      {
+        ...updateMyBookingDto,
+        updatedBy: updatedByName
+      },
     );
     return ApiResponse({});
   }
 
-  async deleteMyBooking(userId: string, bookingId: string) {
-    // Récupérer le customer associé au user
+  public async deleteMyBooking(userId: string, bookingId: string) {
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {
       return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
     }
 
-    // Vérifier si la réservation existe
     const existingBooking = await this.bookingsRepository.findById(bookingId);
     if (!existingBooking) {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
     }
 
-    // Vérifier que la réservation appartient bien au customer
     if (existingBooking.customerId !== customer.id) {
       return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
     }
 
-    // Supprimer la réservation
+    if (existingBooking.status === BookingStatus.CONFIRMED) {
+      return ErrorResponse(BookingErrors.CANNOT_CANCEL_BOOKING);
+    }
+
     await this.bookingsRepository.delete(bookingId);
     return ApiResponse({});
   }
 
-  async deleteMyBookings(userId: string, deleteBookingsDto: DeleteBookingsDto) {
+  public async deleteMyBookings(userId: string, deleteBookingsDto: DeleteBookingsDto) {
     const { ids } = deleteBookingsDto;
 
     if (!ids || ids.length === 0) {
       return ErrorResponse(BookingErrors.INVALID_BOOKING_DATA);
     }
 
-    // Récupérer le customer associé au user
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {
       return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
     }
 
-    // Vérifier que toutes les réservations appartiennent au customer
     const bookings = await this.bookingsRepository.findByIds(ids);
     const unauthorizedBooking = bookings.find(
       (booking) => booking.customerId !== customer.id,
@@ -179,12 +172,19 @@ export class BookingsService {
       return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
     }
 
-    // Supprimer les réservations
+    const confirmedBooking = bookings.find(
+      (booking) => booking.status === BookingStatus.CONFIRMED,
+    );
+
+    if (confirmedBooking) {
+      return ErrorResponse(BookingErrors.CANNOT_CANCEL_BOOKING);
+    }
+
     const result = await this.bookingsRepository.deleteMany(ids);
     return ApiResponse({ count: result.count });
   }
 
-  async findById(id: string) {
+  public async findById(id: string) {
     const booking = await this.bookingsRepository.findById(id);
     if (!booking) {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
@@ -193,20 +193,27 @@ export class BookingsService {
     return ApiResponse(BookingDetailResponseDto.fromEntity(booking));
   }
 
-  async update(id: string, updateBookingDto: UpdateBookingDto) {
+  public async update(id: string, updateBookingDto: UpdateBookingDto, user?: any) {
     const existingBooking = await this.bookingsRepository.findById(id);
     if (!existingBooking) {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
     }
 
+    const updatedByName = user?.firstName && user?.lastName 
+      ? `${user.firstName} ${user.lastName}`.trim()
+      : undefined;
+
     await this.bookingsRepository.update(
       id,
-      updateBookingDto,
+      {
+        ...updateBookingDto,
+        updatedBy: updatedByName
+      },
     );
     return ApiResponse({});
   }
 
-  async delete(id: string) {
+  public async delete(id: string) {
     const existingBooking = await this.bookingsRepository.findById(id);
     if (!existingBooking) {
       return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
@@ -216,7 +223,7 @@ export class BookingsService {
     return ApiResponse({});
   }
 
-  async deleteMany(deleteBookingsDto: DeleteBookingsDto) {
+  public async deleteMany(deleteBookingsDto: DeleteBookingsDto) {
     const { ids } = deleteBookingsDto;
 
     if (!ids || ids.length === 0) {
@@ -225,5 +232,77 @@ export class BookingsService {
 
     const result = await this.bookingsRepository.deleteMany(ids);
     return ApiResponse({ count: result.count });
+  }
+
+  public async cancelMyBooking(userId: string, bookingId: string, cancelBookingDto: CancelBookingDto) {
+    const MINIMUM_DAYS_BEFORE_TRAVEL = 7;
+
+    const customer = await this.customersRepository.findByUserId(userId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    const existingBooking = await this.bookingsRepository.findById(bookingId);
+    if (!existingBooking) {
+      return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
+    }
+
+    if (existingBooking.customerId !== customer.id) {
+      return ErrorResponse(BookingErrors.UNAUTHORIZED_ACCESS);
+    }
+
+    if (existingBooking.status === BookingStatus.CANCELLED) {
+      return ErrorResponse(BookingErrors.BOOKING_ALREADY_CANCELLED);
+    }
+
+    if (existingBooking.status !== BookingStatus.PENDING && existingBooking.status !== BookingStatus.CONFIRMED) {
+      return ErrorResponse(BookingErrors.INVALID_BOOKING_STATUS_FOR_CANCELLATION);
+    }
+
+    const now = new Date();
+    const travelDate = new Date(existingBooking.travelDate);
+    const daysDifference = Math.ceil((travelDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysDifference < MINIMUM_DAYS_BEFORE_TRAVEL) {
+      return ErrorResponse(BookingErrors.CANCELLATION_TOO_LATE);
+    }
+
+    await this.bookingsRepository.update(
+      bookingId,
+      {
+        status: BookingStatus.CANCELLED,
+        cancelledAt: now,
+        cancellationReason: cancelBookingDto.cancellationReason,
+      },
+    );
+
+    return ApiResponse({});
+  }
+
+  public async cancelBooking(id: string, cancelBookingDto: CancelBookingDto, user?: any) {
+    const existingBooking = await this.bookingsRepository.findById(id);
+    if (!existingBooking) {
+      return ErrorResponse(BookingErrors.BOOKING_NOT_FOUND);
+    }
+
+    if (existingBooking.status === BookingStatus.CANCELLED) {
+      return ErrorResponse(BookingErrors.BOOKING_ALREADY_CANCELLED);
+    }
+
+    const updatedByName = user?.firstName && user?.lastName 
+      ? `${user.firstName} ${user.lastName}`.trim()
+      : undefined;
+
+    await this.bookingsRepository.update(
+      id,
+      {
+        status: BookingStatus.CANCELLED,
+        cancelledAt: new Date(),
+        cancellationReason: cancelBookingDto.cancellationReason,
+        updatedBy: updatedByName,
+      },
+    );
+
+    return ApiResponse({});
   }
 }

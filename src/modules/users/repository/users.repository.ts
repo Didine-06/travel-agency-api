@@ -2,6 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { User, Prisma } from '@prisma/client';
 
+type UserWithCustomer = User & {
+  customer: {
+    id: string;
+    phone: string | null;
+    address: string | null;
+    dateOfBirth: Date | null;
+    country: string | null;
+    city: string | null;
+  } | null;
+};
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -10,7 +21,7 @@ export class UsersRepository {
     return this.prisma.user.create({ data });
   }
 
-  async findAll(): Promise<User[]> {
+  async findAll(): Promise<UserWithCustomer[]> {
     return await this.prisma.user.findMany({
       include: {
         customer: {
@@ -28,13 +39,25 @@ export class UsersRepository {
     });
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string): Promise<UserWithCustomer | null> {
     return this.prisma.user.findUnique({
       where: { id },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            phone: true,
+            address: true,
+            dateOfBirth: true,
+            country: true,
+            city: true,
+          },
+        },
+      },
     });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<UserWithCustomer | null> {
     return this.prisma.user.findUnique({
       where: { email },
       include: {

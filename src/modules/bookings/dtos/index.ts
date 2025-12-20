@@ -6,3 +6,4 @@ export * from './create-my-booking.dto';
 export * from './update-my-booking.dto';
 export * from './booking-list-response.dto';
 export * from './booking-detail-response.dto';
+export * from './cancel-booking.dto';

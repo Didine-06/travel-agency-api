@@ -16,4 +16,7 @@ export class UpdateBookingDto {
 
   @ApiPropertyOptional({ enum: BookingStatus, example: BookingStatus.CONFIRMED })
   status?: BookingStatus;
+
+  // Champ interne pour le monitoring - non exposé à l'API
+  updatedBy?: string;
 }

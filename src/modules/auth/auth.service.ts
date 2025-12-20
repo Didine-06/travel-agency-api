@@ -60,7 +60,13 @@ export class AuthService {
       return ErrorResponse(AuthErrors.UNAUTHORIZED);
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { 
+      sub: user.id, 
+      email: user.email, 
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName
+    };
     const accessToken = this.jwtService.sign(payload);
 
     const authResponse: AuthResponseDto = {
