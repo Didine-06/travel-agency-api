@@ -36,6 +36,7 @@ model User {
 
   language      Language       @relation(fields: [languageId], references: [isoCode], onDelete: Restrict)
   customer      Customer?
+  agent         Agent?
   notifications Notification[]
 
   @@map("users")
@@ -61,8 +62,24 @@ model Customer {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings      Booking[]
   flightTickets FlightTicket[]
+  consultations Consultation[]
 
   @@map("customers")
+}
+
+model Agent {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  phone     String?
+  specialty String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consultations       Consultation[]
+  agentAvailabilities AgentAvailability[]
+
+  @@map("agents")
 }
 
 model Destination {
@@ -142,11 +159,8 @@ model FlightTicket {
   seatClass         SeatClass    @map("seat_class")
   ticketPrice       Decimal      @db.Decimal(10, 2) @map("ticket_price")
   status            TicketStatus @default(RESERVED)
-  issuedAt          DateTime?    @map("issued_at")
-  cancelledAt       DateTime?    @map("cancelled_at")
   createdAt         DateTime     @default(now()) @map("created_at")
   updatedAt         DateTime     @updatedAt @map("updated_at")
-  updatedBy         String?      @map("updated_by")
 
   booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -164,6 +178,45 @@ enum SeatClass {
   ECONOMY
   BUSINESS
   FIRST
+}
+
+model Consultation {
+  id               String             @id @default(uuid())
+  customerId       String             @map("customer_id")
+  agentId          String?            @map("agent_id")
+  subject          String
+  description      String?
+  consultationDate DateTime           @map("consultation_date")
+  duration         Int                @default(30)
+  status           ConsultationStatus @default(PENDING)
+  cancelledAt      DateTime?          @map("cancelled_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  agent    Agent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@map("consultations")
+}
+
+enum ConsultationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model AgentAvailability {
+  id        String   @id @default(uuid())
+  agentId   String   @map("agent_id")
+  dayOfWeek Int      @map("day_of_week")
+  startTime String   @map("start_time")
+  endTime   String   @map("end_time")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_availabilities")
 }
 
 model Notification {

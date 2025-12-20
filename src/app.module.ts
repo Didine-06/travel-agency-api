@@ -9,6 +9,7 @@ import { PackagesModule } from './modules/packages/packages.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { FlightTicketsModule } from './modules/flight-tickets/flight-tickets.module';
+import { ConsultationsModule } from './modules/consultations/consultations.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
@@ -27,6 +28,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     CustomersModule,
     BookingsModule,
     FlightTicketsModule,
+    ConsultationsModule,
     DashboardModule,
     NotificationsModule,
     UploadsModule,

@@ -17,113 +17,55 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { FlightTicketsService } from './flight-tickets.service';
+import { ConsultationsService } from './consultations.service';
 import {
-  CreateFlightTicketDto,
-  CreateMyFlightTicketDto,
-  UpdateFlightTicketDto,
-  UpdateMyFlightTicketDto,
-  FlightTicketResponseDto,
-  FlightTicketListResponseDto,
-  FlightTicketDetailResponseDto,
-  CancelFlightTicketDto,
-  DeleteFlightTicketsDto,
+  CreateConsultationDto,
+  UpdateConsultationDto,
+  ConsultationResponseDto,
+  ConsultationListResponseDto,
+  ConsultationDetailResponseDto,
+  CancelConsultationDto,
+  DeleteConsultationsDto,
 } from './dtos';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
-import { FlightTicketErrors } from './enums';
+import { ConsultationErrors } from './enums';
 import { UserLanguage } from '../../common/decorators/user-language.decorator';
 import { I18nService } from '../../common/i18n';
 import { UserLanguageGuard } from '../../common/guards/user-language.guard';
 
-@ApiTags('Flight Tickets')
+@ApiTags('Consultations')
 @ApiBearerAuth('JWT-auth')
-@Controller('flight-tickets')
+@Controller('consultations')
 @UseGuards(JwtAuthGuard, RolesGuard, UserLanguageGuard)
-export class FlightTicketsController {
+export class ConsultationsController {
   constructor(
-    private readonly flightTicketsService: FlightTicketsService,
+    private readonly consultationsService: ConsultationsService,
     private readonly i18n: I18nService,
   ) {}
 
-  // ===== Client Endpoints (Must be first to avoid route conflicts) =====
+  // ===== Client Endpoints =====
 
-  @Get('my-tickets')
+  @Post('my-consultations')
   @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Get all my flight tickets (Client)' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of my flight tickets',
-    type: FlightTicketListResponseDto,
-  })
-  public async findMyTickets(@CurrentUser() user: any) {
-    return this.flightTicketsService.findMyTickets(user.userId);
-  }
-
-  @Get('my-tickets/:id')
-  @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Get my flight ticket by ID (Client)' })
-  @ApiResponse({
-    status: 200,
-    description: 'My flight ticket details',
-    type: FlightTicketDetailResponseDto,
-  })
-  public async findMyTicket(
-    @CurrentUser() user: any,
-    @Param('id') id: string,
-    @UserLanguage() lang: string,
-    @Res() res: Response,
-  ) {
-    const result = await this.flightTicketsService.findMyTicket(
-      user.userId,
-      id,
-    );
-
-    if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
-    }
-
-    if (result.isError && 'error' in result) {
-      const translatedMessage = this.i18n.translateError(result.error, lang);
-      const errorResponse = {
-        ...result,
-        message: translatedMessage,
-      };
-
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
-        case FlightTicketErrors.CUSTOMER_NOT_FOUND:
-          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.UNAUTHORIZED_ACCESS:
-          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        default:
-          return res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .json(errorResponse);
-      }
-    }
-  }
-
-  @Post('my-tickets')
-  @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Create my flight ticket (Client)' })
+  @ApiOperation({ summary: 'Create a consultation request (Client)' })
   @ApiResponse({
     status: 201,
-    description: 'My flight ticket created',
-    type: FlightTicketResponseDto,
+    description: 'Consultation created',
+    type: ConsultationResponseDto,
   })
-  public async createMyTicket(
+  public async createMyConsultation(
     @CurrentUser() user: any,
-    @Body() createMyFlightTicketDto: CreateMyFlightTicketDto,
+    @Body() createConsultationDto: CreateConsultationDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.flightTicketsService.createMyTicket(
+    const result = await this.consultationsService.createMyConsultation(
       user.userId,
-      createMyFlightTicketDto,
+      createConsultationDto,
     );
 
     if (result.isSuccess) {
@@ -137,65 +79,12 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.CUSTOMER_NOT_FOUND:
-        case FlightTicketErrors.BOOKING_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CUSTOMER_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.INVALID_TICKET_DATA:
-        case FlightTicketErrors.INVALID_DATETIME:
-        case FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE:
-          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        case FlightTicketErrors.UNAUTHORIZED_ACCESS:
-          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        default:
-          return res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .json(errorResponse);
-      }
-    }
-  }
-
-  @Patch('my-tickets/:id')
-  @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Update my flight ticket (Client)' })
-  @ApiResponse({
-    status: 200,
-    description: 'My flight ticket updated',
-  })
-  public async updateMyTicket(
-    @CurrentUser() user: any,
-    @Param('id') id: string,
-    @Body() updateMyFlightTicketDto: UpdateMyFlightTicketDto,
-    @UserLanguage() lang: string,
-    @Res() res: Response,
-  ) {
-    const result = await this.flightTicketsService.updateMyTicket(
-      user.userId,
-      id,
-      updateMyFlightTicketDto,
-      user,
-    );
-
-    if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
-    }
-
-    if (result.isError && 'error' in result) {
-      const translatedMessage = this.i18n.translateError(result.error, lang);
-      const errorResponse = {
-        ...result,
-        message: translatedMessage,
-      };
-
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
-        case FlightTicketErrors.CUSTOMER_NOT_FOUND:
-          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.UNAUTHORIZED_ACCESS:
-          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        case FlightTicketErrors.INVALID_TICKET_STATUS:
-        case FlightTicketErrors.INVALID_DATETIME:
-        case FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE:
+        case ConsultationErrors.INVALID_CONSULTATION_DATE:
+        case ConsultationErrors.CONSULTATION_DATE_IN_PAST:
+        case ConsultationErrors.TIME_SLOT_NOT_AVAILABLE:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
@@ -205,69 +94,33 @@ export class FlightTicketsController {
     }
   }
 
-  @Patch('my-tickets/:id/cancel')
+  @Get('my-consultations')
   @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Cancel my flight ticket (Client)' })
+  @ApiOperation({ summary: 'Get all my consultations (Client)' })
   @ApiResponse({
     status: 200,
-    description: 'My flight ticket cancelled',
+    description: 'List of my consultations',
+    type: ConsultationListResponseDto,
   })
-  public async cancelMyTicket(
-    @CurrentUser() user: any,
-    @Param('id') id: string,
-    @Body() cancelFlightTicketDto: CancelFlightTicketDto,
-    @UserLanguage() lang: string,
-    @Res() res: Response,
-  ) {
-    const result = await this.flightTicketsService.cancelMyTicket(
-      user.userId,
-      id,
-      cancelFlightTicketDto,
-      user,
-    );
-
-    if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
-    }
-
-    if (result.isError && 'error' in result) {
-      const translatedMessage = this.i18n.translateError(result.error, lang);
-      const errorResponse = {
-        ...result,
-        message: translatedMessage,
-      };
-
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
-        case FlightTicketErrors.CUSTOMER_NOT_FOUND:
-          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.UNAUTHORIZED_ACCESS:
-          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        case FlightTicketErrors.TICKET_ALREADY_CANCELLED:
-        case FlightTicketErrors.INVALID_TICKET_STATUS_FOR_CANCELLATION:
-          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        default:
-          return res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .json(errorResponse);
-      }
-    }
+  public async findMyConsultations(@CurrentUser() user: any) {
+    return this.consultationsService.findMyConsultations(user.userId);
   }
 
-  @Delete('my-tickets/:id')
+  @Get('my-consultations/:id')
   @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Delete my flight ticket (Client)' })
+  @ApiOperation({ summary: 'Get my consultation by ID (Client)' })
   @ApiResponse({
     status: 200,
-    description: 'My flight ticket deleted',
+    description: 'My consultation details',
+    type: ConsultationDetailResponseDto,
   })
-  public async deleteMyTicket(
+  public async findMyConsultation(
     @CurrentUser() user: any,
     @Param('id') id: string,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.flightTicketsService.deleteMyTicket(
+    const result = await this.consultationsService.findMyConsultation(
       user.userId,
       id,
     );
@@ -283,14 +136,12 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
-        case FlightTicketErrors.CUSTOMER_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
+        case ConsultationErrors.CUSTOMER_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.UNAUTHORIZED_ACCESS:
+        case ConsultationErrors.UNAUTHORIZED_ACCESS:
           return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        case FlightTicketErrors.CANNOT_CANCEL_TICKET:
-          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -299,22 +150,24 @@ export class FlightTicketsController {
     }
   }
 
-  @Delete('my-tickets')
+  @Patch('my-consultations/:id')
   @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Delete multiple my flight tickets (Client)' })
+  @ApiOperation({ summary: 'Update my consultation (Client)' })
   @ApiResponse({
     status: 200,
-    description: 'My flight tickets deleted',
+    description: 'My consultation updated',
   })
-  public async deleteMyTickets(
+  public async updateMyConsultation(
     @CurrentUser() user: any,
-    @Body() deleteFlightTicketsDto: DeleteFlightTicketsDto,
+    @Param('id') id: string,
+    @Body() updateConsultationDto: UpdateConsultationDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.flightTicketsService.deleteMyTickets(
+    const result = await this.consultationsService.updateMyConsultation(
       user.userId,
-      deleteFlightTicketsDto,
+      id,
+      updateConsultationDto,
     );
 
     if (result.isSuccess) {
@@ -328,13 +181,16 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.CUSTOMER_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
+        case ConsultationErrors.CUSTOMER_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.UNAUTHORIZED_ACCESS:
+        case ConsultationErrors.UNAUTHORIZED_ACCESS:
           return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        case FlightTicketErrors.INVALID_TICKET_DATA:
-        case FlightTicketErrors.CANNOT_CANCEL_TICKET:
+        case ConsultationErrors.INVALID_CONSULTATION_STATUS:
+        case ConsultationErrors.INVALID_CONSULTATION_DATE:
+        case ConsultationErrors.CONSULTATION_DATE_IN_PAST:
+        case ConsultationErrors.TIME_SLOT_NOT_AVAILABLE:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
@@ -344,26 +200,26 @@ export class FlightTicketsController {
     }
   }
 
-  // ===== Admin/Agent Endpoints =====
-
-  @Post()
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Create a new flight ticket (Admin/Agent)' })
+  @Delete('my-consultations/:id')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Delete my consultation (Client)' })
   @ApiResponse({
-    status: 201,
-    description: 'Flight ticket created',
-    type: FlightTicketResponseDto,
+    status: 200,
+    description: 'My consultation deleted',
   })
-  public async create(
-    @Body() createFlightTicketDto: CreateFlightTicketDto,
+  public async deleteMyConsultation(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result =
-      await this.flightTicketsService.create(createFlightTicketDto);
+    const result = await this.consultationsService.deleteMyConsultation(
+      user.userId,
+      id,
+    );
 
     if (result.isSuccess) {
-      return res.status(HttpStatus.CREATED).json(result);
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -373,14 +229,13 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.CUSTOMER_NOT_FOUND:
-        case FlightTicketErrors.BOOKING_NOT_FOUND:
-        case FlightTicketErrors.TICKET_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
+        case ConsultationErrors.CUSTOMER_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.INVALID_TICKET_DATA:
-        case FlightTicketErrors.INVALID_DATETIME:
-        case FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE:
+        case ConsultationErrors.UNAUTHORIZED_ACCESS:
+          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        case ConsultationErrors.CANNOT_CANCEL_CONSULTATION:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
@@ -389,33 +244,200 @@ export class FlightTicketsController {
       }
     }
   }
+
+  @Patch('my-consultations/:id/cancel')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Cancel my consultation (Client)' })
+  @ApiResponse({
+    status: 200,
+    description: 'My consultation cancelled',
+  })
+  public async cancelMyConsultation(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() cancelConsultationDto: CancelConsultationDto,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.consultationsService.cancelMyConsultation(
+      user.userId,
+      id,
+      cancelConsultationDto,
+    );
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
+        case ConsultationErrors.CUSTOMER_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        case ConsultationErrors.UNAUTHORIZED_ACCESS:
+          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        case ConsultationErrors.CONSULTATION_ALREADY_CANCELLED:
+        case ConsultationErrors.INVALID_CONSULTATION_STATUS_FOR_CANCELLATION:
+        case ConsultationErrors.CANCELLATION_TOO_LATE:
+          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
+  // ===== Agent Endpoints =====
+
+  @Get('pending')
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get pending consultations (Agent)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of pending consultations',
+    type: ConsultationListResponseDto,
+  })
+  public async findPendingConsultations() {
+    return this.consultationsService.findPendingConsultations();
+  }
+
+  @Get('assigned-to-me')
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get my assigned consultations (Agent)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of my assigned consultations',
+    type: ConsultationListResponseDto,
+  })
+  public async findMyAssignedConsultations(@CurrentUser() user: any) {
+    return this.consultationsService.findMyAssignedConsultations(user.userId);
+  }
+
+  @Patch(':id/assign-to-me')
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Assign consultation to me (Agent)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Consultation assigned',
+  })
+  public async assignConsultationToMe(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.consultationsService.assignConsultationToMe(
+      user.userId,
+      id,
+    );
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
+        case ConsultationErrors.AGENT_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        case ConsultationErrors.INVALID_CONSULTATION_STATUS:
+        case ConsultationErrors.CONSULTATION_ALREADY_ASSIGNED:
+        case ConsultationErrors.AGENT_NOT_AVAILABLE:
+          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
+  @Patch(':id/complete')
+  @Roles(UserRole.AGENT, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Mark consultation as completed (Agent)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Consultation completed',
+  })
+  public async completeConsultation(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.consultationsService.completeConsultation(
+      user.userId,
+      id,
+    );
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
+        case ConsultationErrors.AGENT_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        case ConsultationErrors.UNAUTHORIZED_ACCESS:
+          return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
+        case ConsultationErrors.INVALID_CONSULTATION_STATUS:
+          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
+  // ===== Admin Endpoints =====
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Get all flight tickets (Admin/Agent)' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all consultations (Admin)' })
   @ApiResponse({
     status: 200,
-    description: 'List of flight tickets',
-    type: FlightTicketListResponseDto,
+    description: 'List of consultations',
+    type: ConsultationListResponseDto,
   })
   public async findAll() {
-    return this.flightTicketsService.findAll();
+    return this.consultationsService.findAll();
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Get flight ticket by ID (Admin/Agent)' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get consultation by ID (Admin)' })
   @ApiResponse({
     status: 200,
-    description: 'Flight ticket details',
-    type: FlightTicketDetailResponseDto,
+    description: 'Consultation details',
+    type: ConsultationDetailResponseDto,
   })
   public async findById(
     @Param('id') id: string,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.flightTicketsService.findById(id);
+    const result = await this.consultationsService.findById(id);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
@@ -428,8 +450,8 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
         default:
           return res
@@ -440,23 +462,21 @@ export class FlightTicketsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Update flight ticket (Admin/Agent)' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update consultation (Admin)' })
   @ApiResponse({
     status: 200,
-    description: 'Flight ticket updated',
+    description: 'Consultation updated',
   })
   public async update(
     @Param('id') id: string,
-    @Body() updateFlightTicketDto: UpdateFlightTicketDto,
-    @CurrentUser() user: any,
+    @Body() updateConsultationDto: UpdateConsultationDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.flightTicketsService.update(
+    const result = await this.consultationsService.update(
       id,
-      updateFlightTicketDto,
-      user,
+      updateConsultationDto,
     );
 
     if (result.isSuccess) {
@@ -470,13 +490,9 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.INVALID_TICKET_DATA:
-        case FlightTicketErrors.INVALID_DATETIME:
-        case FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE:
-          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -486,19 +502,18 @@ export class FlightTicketsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Delete flight ticket (Admin/Agent)' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete consultation (Admin)' })
   @ApiResponse({
     status: 200,
-    description: 'Flight ticket deleted',
+    description: 'Consultation deleted',
   })
   public async delete(
     @Param('id') id: string,
-    @CurrentUser() user: any,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.flightTicketsService.delete(id);
+    const result = await this.consultationsService.delete(id);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
@@ -511,8 +526,8 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
         default:
           return res
@@ -523,19 +538,19 @@ export class FlightTicketsController {
   }
 
   @Delete()
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Delete multiple flight tickets (Admin/Agent)' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete multiple consultations (Admin)' })
   @ApiResponse({
     status: 200,
-    description: 'Flight tickets deleted',
+    description: 'Consultations deleted',
   })
   public async deleteMany(
-    @Body() deleteFlightTicketsDto: DeleteFlightTicketsDto,
+    @Body() deleteConsultationsDto: DeleteConsultationsDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
     const result =
-      await this.flightTicketsService.deleteMany(deleteFlightTicketsDto);
+      await this.consultationsService.deleteMany(deleteConsultationsDto);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
@@ -553,23 +568,21 @@ export class FlightTicketsController {
   }
 
   @Patch(':id/cancel')
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Cancel flight ticket (Admin/Agent)' })
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Cancel consultation (Admin)' })
   @ApiResponse({
     status: 200,
-    description: 'Flight ticket cancelled',
+    description: 'Consultation cancelled',
   })
   public async cancel(
     @Param('id') id: string,
-    @Body() cancelFlightTicketDto: CancelFlightTicketDto,
-    @CurrentUser() user: any,
+    @Body() cancelConsultationDto: CancelConsultationDto,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
-    const result = await this.flightTicketsService.cancelTicket(
+    const result = await this.consultationsService.cancelConsultation(
       id,
-      cancelFlightTicketDto,
-      user,
+      cancelConsultationDto,
     );
 
     if (result.isSuccess) {
@@ -583,51 +596,10 @@ export class FlightTicketsController {
         message: translatedMessage,
       };
 
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
+      switch (result.error as ConsultationErrors) {
+        case ConsultationErrors.CONSULTATION_NOT_FOUND:
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.TICKET_ALREADY_CANCELLED:
-        case FlightTicketErrors.INVALID_TICKET_STATUS_FOR_CANCELLATION:
-          return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
-        default:
-          return res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .json(errorResponse);
-      }
-    }
-  }
-
-  @Patch(':id/mark-as-paid')
-  @Roles(UserRole.ADMIN, UserRole.AGENT)
-  @ApiOperation({ summary: 'Mark flight ticket as paid (Admin/Agent)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Flight ticket marked as paid',
-  })
-  public async markAsPaid(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-    @UserLanguage() lang: string,
-    @Res() res: Response,
-  ) {
-    const result = await this.flightTicketsService.markAsPaid(id, user);
-
-    if (result.isSuccess) {
-      return res.status(HttpStatus.OK).json(result);
-    }
-
-    if (result.isError && 'error' in result) {
-      const translatedMessage = this.i18n.translateError(result.error, lang);
-      const errorResponse = {
-        ...result,
-        message: translatedMessage,
-      };
-
-      switch (result.error as FlightTicketErrors) {
-        case FlightTicketErrors.TICKET_NOT_FOUND:
-          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
-        case FlightTicketErrors.TICKET_ALREADY_PAID:
-        case FlightTicketErrors.INVALID_TICKET_STATUS_FOR_PAYMENT:
+        case ConsultationErrors.CONSULTATION_ALREADY_CANCELLED:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res

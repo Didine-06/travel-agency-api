@@ -62,10 +62,7 @@ export class FlightTicketsService {
 
   public async findAll() {
     const tickets = await this.flightTicketsRepository.findAll();
-    return ApiResponse({
-      data: tickets,
-      total: tickets.length,
-    });
+    return ApiResponse(tickets);
   }
 
   public async findById(id: string) {
@@ -109,15 +106,7 @@ export class FlightTicketsService {
       }
     }
 
-    const updatedByName =
-      user?.firstName && user?.lastName
-        ? `${user.firstName} ${user.lastName}`.trim()
-        : undefined;
-
-    await this.flightTicketsRepository.update(id, {
-      ...updateFlightTicketDto,
-      updatedBy: updatedByName,
-    });
+    await this.flightTicketsRepository.update(id, updateFlightTicketDto);
 
     return ApiResponse({});
   }
@@ -163,15 +152,8 @@ export class FlightTicketsService {
       );
     }
 
-    const updatedByName =
-      user?.firstName && user?.lastName
-        ? `${user.firstName} ${user.lastName}`.trim()
-        : undefined;
-
     await this.flightTicketsRepository.update(id, {
       status: TicketStatus.CANCELLED,
-      cancelledAt: new Date(),
-      updatedBy: updatedByName,
     });
 
     return ApiResponse({});
@@ -193,15 +175,8 @@ export class FlightTicketsService {
       );
     }
 
-    const updatedByName =
-      user?.firstName && user?.lastName
-        ? `${user.firstName} ${user.lastName}`.trim()
-        : undefined;
-
     await this.flightTicketsRepository.update(id, {
       status: TicketStatus.PAID,
-      issuedAt: new Date(),
-      updatedBy: updatedByName,
     });
 
     return ApiResponse({});
@@ -217,10 +192,7 @@ export class FlightTicketsService {
 
     const tickets =
       await this.flightTicketsRepository.findByCustomerId(customer.id);
-    return ApiResponse({
-      data: tickets,
-      total: tickets.length,
-    });
+    return ApiResponse(tickets);
   }
 
   public async findMyTicket(userId: string, ticketId: string) {
@@ -334,15 +306,7 @@ export class FlightTicketsService {
       }
     }
 
-    const updatedByName =
-      user?.firstName && user?.lastName
-        ? `${user.firstName} ${user.lastName}`.trim()
-        : undefined;
-
-    await this.flightTicketsRepository.update(ticketId, {
-      ...updateMyFlightTicketDto,
-      updatedBy: updatedByName,
-    });
+    await this.flightTicketsRepository.update(ticketId, updateMyFlightTicketDto);
 
     return ApiResponse({});
   }
@@ -439,15 +403,8 @@ export class FlightTicketsService {
       );
     }
 
-    const updatedByName =
-      user?.firstName && user?.lastName
-        ? `${user.firstName} ${user.lastName}`.trim()
-        : undefined;
-
     await this.flightTicketsRepository.update(ticketId, {
       status: TicketStatus.CANCELLED,
-      cancelledAt: new Date(),
-      updatedBy: updatedByName,
     });
 
     return ApiResponse({});

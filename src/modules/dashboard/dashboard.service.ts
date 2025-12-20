@@ -19,6 +19,11 @@ export class DashboardService {
       paidTickets,
       reservedTickets,
       totalRevenue,
+      totalConsultations,
+      pendingConsultations,
+      confirmedConsultations,
+      completedConsultations,
+      totalAgents,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.customer.count(),
@@ -36,6 +41,11 @@ export class DashboardService {
           ticketPrice: true,
         },
       }),
+      this.prisma.consultation.count(),
+      this.prisma.consultation.count({ where: { status: 'PENDING' } }),
+      this.prisma.consultation.count({ where: { status: 'CONFIRMED' } }),
+      this.prisma.consultation.count({ where: { status: 'COMPLETED' } }),
+      this.prisma.agent.count(),
     ]);
 
     const stats = {
@@ -60,6 +70,15 @@ export class DashboardService {
         total: totalFlightTickets,
         paid: paidTickets,
         reserved: reservedTickets,
+      },
+      consultations: {
+        total: totalConsultations,
+        pending: pendingConsultations,
+        confirmed: confirmedConsultations,
+        completed: completedConsultations,
+      },
+      agents: {
+        total: totalAgents,
       },
       revenue: {
         total: totalRevenue._sum.ticketPrice || 0,

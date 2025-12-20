@@ -26,18 +26,9 @@ export class FlightTicketResponseDto {
   @ApiProperty({ enum: TicketStatus })
   status: TicketStatus;
 
-  @ApiProperty({ required: false })
-  issuedAt?: Date;
-
-  @ApiProperty({ required: false })
-  cancelledAt?: Date;
-
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
-
-  @ApiProperty({ required: false })
-  updatedBy?: string;
 }
