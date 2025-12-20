@@ -87,7 +87,6 @@ export class BookingsRepository {
             destination: true,
           },
         },
-        payments: true,
       },
     });
   }
@@ -113,7 +112,6 @@ export class BookingsRepository {
             destination: true,
           },
         },
-        payments: true,
       },
       orderBy: { createdAt: 'desc' },
     });

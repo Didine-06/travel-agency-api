@@ -59,6 +59,26 @@ export const translations = {
     BOOKINGS_DELETED_SUCCESSFULLY: 'Réservations supprimées avec succès',
     BOOKING_UPDATED_SUCCESSFULLY: 'Réservation mise à jour avec succès',
     BOOKING_CANCELLED_SUCCESSFULLY: 'Réservation annulée avec succès',
+
+    // Flight Ticket Errors
+    TICKET_NOT_FOUND: 'Billet introuvable',
+    INVALID_TICKET_DATA: 'Données de billet invalides',
+    TICKET_CREATION_FAILED: 'Échec de la création du billet',
+    TICKET_UPDATE_FAILED: 'Échec de la mise à jour du billet',
+    TICKET_DELETE_FAILED: 'Échec de la suppression du billet',
+    INVALID_TICKET_STATUS: 'Statut de billet invalide',
+    CANNOT_CANCEL_TICKET: 'Impossible d\'annuler ce billet',
+    TICKET_ALREADY_CANCELLED: 'Ce billet est déjà annulé',
+    TICKET_ALREADY_PAID: 'Ce billet est déjà payé',
+    INVALID_TICKET_STATUS_FOR_CANCELLATION: 'Ce billet ne peut pas être annulé (statut invalide)',
+    INVALID_TICKET_STATUS_FOR_PAYMENT: 'Ce billet ne peut pas être marqué comme payé (statut invalide)',
+    INVALID_DATETIME: 'Date et heure invalides',
+    ARRIVAL_BEFORE_DEPARTURE: 'La date d\'arrivée doit être après la date de départ',
+    TICKET_DELETED_SUCCESSFULLY: 'Billet supprimé avec succès',
+    TICKETS_DELETED_SUCCESSFULLY: 'Billets supprimés avec succès',
+    TICKET_UPDATED_SUCCESSFULLY: 'Billet mis à jour avec succès',
+    TICKET_CANCELLED_SUCCESSFULLY: 'Billet annulé avec succès',
+    TICKET_MARKED_AS_PAID_SUCCESSFULLY: 'Billet marqué comme payé avec succès',
   },
   en: {
     // User Errors
@@ -117,6 +137,26 @@ export const translations = {
     BOOKINGS_DELETED_SUCCESSFULLY: 'Bookings deleted successfully',
     BOOKING_UPDATED_SUCCESSFULLY: 'Booking updated successfully',
     BOOKING_CANCELLED_SUCCESSFULLY: 'Booking cancelled successfully',
+
+    // Flight Ticket Errors
+    TICKET_NOT_FOUND: 'Ticket not found',
+    INVALID_TICKET_DATA: 'Invalid ticket data',
+    TICKET_CREATION_FAILED: 'Ticket creation failed',
+    TICKET_UPDATE_FAILED: 'Ticket update failed',
+    TICKET_DELETE_FAILED: 'Ticket deletion failed',
+    INVALID_TICKET_STATUS: 'Invalid ticket status',
+    CANNOT_CANCEL_TICKET: 'Cannot cancel this ticket',
+    TICKET_ALREADY_CANCELLED: 'This ticket is already cancelled',
+    TICKET_ALREADY_PAID: 'This ticket is already paid',
+    INVALID_TICKET_STATUS_FOR_CANCELLATION: 'This ticket cannot be cancelled (invalid status)',
+    INVALID_TICKET_STATUS_FOR_PAYMENT: 'This ticket cannot be marked as paid (invalid status)',
+    INVALID_DATETIME: 'Invalid date and time',
+    ARRIVAL_BEFORE_DEPARTURE: 'Arrival date must be after departure date',
+    TICKET_DELETED_SUCCESSFULLY: 'Ticket deleted successfully',
+    TICKETS_DELETED_SUCCESSFULLY: 'Tickets deleted successfully',
+    TICKET_UPDATED_SUCCESSFULLY: 'Ticket updated successfully',
+    TICKET_CANCELLED_SUCCESSFULLY: 'Ticket cancelled successfully',
+    TICKET_MARKED_AS_PAID_SUCCESSFULLY: 'Ticket marked as paid successfully',
   },
 };
 

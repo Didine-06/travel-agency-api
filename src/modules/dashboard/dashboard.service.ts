@@ -15,6 +15,9 @@ export class DashboardService {
       totalBookings,
       pendingBookings,
       confirmedBookings,
+      totalFlightTickets,
+      paidTickets,
+      reservedTickets,
       totalRevenue,
     ] = await Promise.all([
       this.prisma.user.count(),
@@ -24,9 +27,13 @@ export class DashboardService {
       this.prisma.booking.count(),
       this.prisma.booking.count({ where: { status: 'PENDING' } }),
       this.prisma.booking.count({ where: { status: 'CONFIRMED' } }),
-      this.prisma.payment.aggregate({
+      this.prisma.flightTicket.count(),
+      this.prisma.flightTicket.count({ where: { status: 'PAID' } }),
+      this.prisma.flightTicket.count({ where: { status: 'RESERVED' } }),
+      this.prisma.flightTicket.aggregate({
+        where: { status: 'PAID' },
         _sum: {
-          amount: true,
+          ticketPrice: true,
         },
       }),
     ]);
@@ -49,8 +56,13 @@ export class DashboardService {
         pending: pendingBookings,
         confirmed: confirmedBookings,
       },
+      flightTickets: {
+        total: totalFlightTickets,
+        paid: paidTickets,
+        reserved: reservedTickets,
+      },
       revenue: {
-        total: totalRevenue._sum.amount || 0,
+        total: totalRevenue._sum.ticketPrice || 0,
       },
     };
 

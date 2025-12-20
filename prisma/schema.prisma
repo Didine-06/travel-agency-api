@@ -58,8 +58,9 @@ model Customer {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings      Booking[]
+  flightTickets FlightTicket[]
 
   @@map("customers")
 }
@@ -118,13 +119,12 @@ model Booking {
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt             DateTime      @updatedAt @map("updated_at")
 
-  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  package  Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  payments Payment[]
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  package       Package        @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  flightTickets FlightTicket[]
 
   @@map("bookings")
 }
-
 
 enum BookingStatus {
   PENDING
@@ -133,34 +133,37 @@ enum BookingStatus {
   COMPLETED
 }
 
-model Payment {
-  id                   String        @id @default(uuid())
-  bookingId            String        @map("booking_id")
-  amount               Decimal       @db.Decimal(10, 2)
-  paymentDate          DateTime      @default(now()) @map("payment_date")
-  paymentMethod        PaymentMethod @map("payment_method")
-  paymentType          PaymentType   @map("payment_type")
-  transactionReference String?       @map("transaction_reference")
-  notes                String?
-  createdAt            DateTime      @default(now()) @map("created_at")
-  updatedAt            DateTime      @updatedAt @map("updated_at")
+model FlightTicket {
+  id                String       @id @default(uuid())
+  bookingId         String       @map("booking_id")
+  customerId        String       @map("customer_id")
+  departureDateTime DateTime     @map("departure_datetime")
+  arrivalDateTime   DateTime     @map("arrival_datetime")
+  seatClass         SeatClass    @map("seat_class")
+  ticketPrice       Decimal      @db.Decimal(10, 2) @map("ticket_price")
+  status            TicketStatus @default(RESERVED)
+  issuedAt          DateTime?    @map("issued_at")
+  cancelledAt       DateTime?    @map("cancelled_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  updatedBy         String?      @map("updated_by")
 
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  @@map("payments")
+  @@map("flight_tickets")
 }
 
-enum PaymentMethod {
-  CASH
-  CARD
-  TRANSFER
-  CHECK
+enum TicketStatus {
+  RESERVED
+  PAID
+  CANCELLED
 }
 
-enum PaymentType {
-  DEPOSIT
-  FULL
-  INSTALLMENT
+enum SeatClass {
+  ECONOMY
+  BUSINESS
+  FIRST
 }
 
 model Notification {

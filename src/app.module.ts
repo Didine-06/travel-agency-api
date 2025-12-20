@@ -8,7 +8,7 @@ import { CommonModule } from './common/common.module';
 import { PackagesModule } from './modules/packages/packages.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
-import { PaymentsModule } from './modules/payments/payments.module';
+import { FlightTicketsModule } from './modules/flight-tickets/flight-tickets.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
@@ -26,7 +26,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     PackagesModule,
     CustomersModule,
     BookingsModule,
-    PaymentsModule,
+    FlightTicketsModule,
     DashboardModule,
     NotificationsModule,
     UploadsModule,
