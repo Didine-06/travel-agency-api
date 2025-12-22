@@ -329,7 +329,7 @@ export class FlightTicketsService {
 
     // Le client ne peut supprimer que les billets RESERVED
     if (existingTicket.status !== TicketStatus.RESERVED) {
-      return ErrorResponse(FlightTicketErrors.CANNOT_CANCEL_TICKET);
+      return ErrorResponse(FlightTicketErrors.CANNOT_DELETE_TICKET);
     }
 
     await this.flightTicketsRepository.delete(ticketId);

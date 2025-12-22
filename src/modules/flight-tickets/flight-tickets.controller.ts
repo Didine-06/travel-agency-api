@@ -289,7 +289,7 @@ export class FlightTicketsController {
           return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
         case FlightTicketErrors.UNAUTHORIZED_ACCESS:
           return res.status(HttpStatus.FORBIDDEN).json(errorResponse);
-        case FlightTicketErrors.CANNOT_CANCEL_TICKET:
+        case FlightTicketErrors.CANNOT_DELETE_TICKET:
           return res.status(HttpStatus.BAD_REQUEST).json(errorResponse);
         default:
           return res
