@@ -78,6 +78,7 @@ export const translations = {
     TICKETS_DELETED_SUCCESSFULLY: 'Billets supprimés avec succès',
     TICKET_UPDATED_SUCCESSFULLY: 'Billet mis à jour avec succès',
     TICKET_CANCELLED_SUCCESSFULLY: 'Billet annulé avec succès',
+    CANNOT_DELETE_TICKET : 'Impossible de supprimer un billet payé',
 
     // Consultation Errors
     CONSULTATION_NOT_FOUND: 'Consultation introuvable',
@@ -179,7 +180,8 @@ export const translations = {
     TICKETS_DELETED_SUCCESSFULLY: 'Tickets deleted successfully',
     TICKET_UPDATED_SUCCESSFULLY: 'Ticket updated successfully',
     TICKET_CANCELLED_SUCCESSFULLY: 'Ticket cancelled successfully',
-    TICKET_MARKED_AS_PAID_SUCCESSFULLY: 'Ticket marked as paid successfully',
+      TICKET_MARKED_AS_PAID_SUCCESSFULLY: 'Ticket marked as paid successfully',
+      CANNOT_DELETE_TICKET : 'Cannot delete a paid ticket',
 
     // Consultation Errors
     CONSULTATION_NOT_FOUND: 'Consultation not found',
