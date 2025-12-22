@@ -6,6 +6,298 @@ import { ApiResponse } from '../../common/helpers';
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getClientStats(userId: string) {
+    // Get customer
+    const customer = await this.prisma.customer.findUnique({
+      where: { userId },
+    });
+
+    if (!customer) {
+      return ApiResponse(null);
+    }
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    // Get all stats in parallel
+    const [
+      totalBookings,
+      pendingBookings,
+      confirmedBookings,
+      completedBookings,
+      cancelledBookings,
+      totalConsultations,
+      pendingConsultations,
+      confirmedConsultations,
+      completedConsultations,
+      cancelledConsultations,
+      totalTickets,
+      reservedTickets,
+      paidTickets,
+      cancelledTickets,
+      nextAppointment,
+    ] = await Promise.all([
+      this.prisma.booking.count({ where: { customerId: customer.id } }),
+      this.prisma.booking.count({ 
+        where: { customerId: customer.id, status: 'PENDING' } 
+      }),
+      this.prisma.booking.count({ 
+        where: { customerId: customer.id, status: 'CONFIRMED' } 
+      }),
+      this.prisma.booking.count({ 
+        where: { customerId: customer.id, status: 'COMPLETED' } 
+      }),
+      this.prisma.booking.count({ 
+        where: { customerId: customer.id, status: 'CANCELLED' } 
+      }),
+      this.prisma.consultation.count({ 
+        where: { customerId: customer.id } 
+      }),
+      this.prisma.consultation.count({ 
+        where: { customerId: customer.id, status: 'PENDING' } 
+      }),
+      this.prisma.consultation.count({ 
+        where: { customerId: customer.id, status: 'CONFIRMED' } 
+      }),
+      this.prisma.consultation.count({ 
+        where: { customerId: customer.id, status: 'COMPLETED' } 
+      }),
+      this.prisma.consultation.count({ 
+        where: { customerId: customer.id, status: 'CANCELLED' } 
+      }),
+      this.prisma.flightTicket.count({ 
+        where: { customerId: customer.id } 
+      }),
+      this.prisma.flightTicket.count({ 
+        where: { customerId: customer.id, status: 'RESERVED' } 
+      }),
+      this.prisma.flightTicket.count({ 
+        where: { customerId: customer.id, status: 'PAID' } 
+      }),
+      this.prisma.flightTicket.count({ 
+        where: { customerId: customer.id, status: 'CANCELLED' } 
+      }),
+      this.prisma.consultation.findFirst({
+        where: {
+          customerId: customer.id,
+          consultationDate: { gte: new Date() },
+          status: { in: ['PENDING', 'CONFIRMED'] },
+        },
+        orderBy: { consultationDate: 'asc' },
+        include: {
+          agent: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    // Calculate percentages for tickets
+    const paidPercentage = totalTickets > 0 
+      ? Math.round((paidTickets / totalTickets) * 100 * 10) / 10 
+      : 0;
+    const unpaidPercentage = totalTickets > 0 
+      ? Math.round(((reservedTickets + cancelledTickets) / totalTickets) * 100 * 10) / 10 
+      : 0;
+
+    const stats = {
+      bookings: {
+        total: totalBookings,
+        pending: pendingBookings,
+        confirmed: confirmedBookings,
+        completed: completedBookings,
+        cancelled: cancelledBookings,
+      },
+      consultations: {
+        total: totalConsultations,
+        pending: pendingConsultations,
+        confirmed: confirmedConsultations,
+        completed: completedConsultations,
+        cancelled: cancelledConsultations,
+      },
+      tickets: {
+        total: totalTickets,
+        reserved: reservedTickets,
+        paid: paidTickets,
+        cancelled: cancelledTickets,
+        paidPercentage,
+        unpaidPercentage,
+      },
+      nextAppointment: nextAppointment
+        ? {
+            id: nextAppointment.id,
+            subject: nextAppointment.subject,
+            consultationDate: nextAppointment.consultationDate,
+            agentName: nextAppointment.agent
+              ? `${nextAppointment.agent.user.firstName || ''} ${nextAppointment.agent.user.lastName || ''}`.trim()
+              : null,
+            status: nextAppointment.status,
+          }
+        : {
+            id: null,
+            subject: null,
+            consultationDate: null,
+            agentName: null,
+            status: null,
+          },
+    };
+
+    return ApiResponse(stats);
+  }
+
+  async getClientCharts(userId: string) {
+    // Get customer
+    const customer = await this.prisma.customer.findUnique({
+      where: { userId },
+    });
+
+    if (!customer) {
+      return ApiResponse(null);
+    }
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    // Get bookings by status
+    const bookingsByStatus = await this.prisma.booking.groupBy({
+      by: ['status'],
+      where: { customerId: customer.id },
+      _count: { id: true },
+    });
+
+    // Get tickets payment status
+    const [paidTicketsCount, unpaidTicketsCount] = await Promise.all([
+      this.prisma.flightTicket.count({
+        where: { customerId: customer.id, status: 'PAID' },
+      }),
+      this.prisma.flightTicket.count({
+        where: { customerId: customer.id, status: { in: ['RESERVED', 'CANCELLED'] } },
+      }),
+    ]);
+
+    // Get spending over time (bookings + paid tickets)
+    const [bookingsSpending, ticketsSpending] = await Promise.all([
+      this.prisma.booking.groupBy({
+        by: ['bookingDate'],
+        where: {
+          customerId: customer.id,
+          bookingDate: { gte: sixMonthsAgo },
+        },
+        _sum: { totalPrice: true },
+      }),
+      this.prisma.flightTicket.groupBy({
+        by: ['createdAt'],
+        where: {
+          customerId: customer.id,
+          status: 'PAID',
+          createdAt: { gte: sixMonthsAgo },
+        },
+        _sum: { ticketPrice: true },
+      }),
+    ]);
+
+    // Calculate total bookings for percentages
+    const totalBookings = bookingsByStatus.reduce(
+      (sum, item) => sum + item._count.id,
+      0
+    );
+
+    // Format bookings by status with percentages
+    const formattedBookingsByStatus = bookingsByStatus.map(item => ({
+      status: item.status,
+      count: item._count.id,
+      percentage: totalBookings > 0 
+        ? Math.round((item._count.id / totalBookings) * 100 * 10) / 10 
+        : 0,
+    }));
+
+    // Calculate payment status percentages
+    const totalTickets = paidTicketsCount + unpaidTicketsCount;
+    const paidPercentage = totalTickets > 0 
+      ? Math.round((paidTicketsCount / totalTickets) * 100 * 10) / 10 
+      : 0;
+    const unpaidPercentage = totalTickets > 0 
+      ? Math.round((unpaidTicketsCount / totalTickets) * 100 * 10) / 10 
+      : 0;
+
+    const ticketsPaymentStatus = [
+      {
+        status: 'PAID',
+        count: paidTicketsCount,
+        percentage: paidPercentage,
+      },
+      {
+        status: 'UNPAID',
+        count: unpaidTicketsCount,
+        percentage: unpaidPercentage,
+      },
+    ];
+
+    // Combine bookings and tickets spending
+    const combinedSpending = this.combineSpendingData(
+      bookingsSpending.map(item => ({
+        date: item.bookingDate,
+        amount: item._sum.totalPrice?.toNumber() || 0,
+      })),
+      ticketsSpending.map(item => ({
+        date: item.createdAt,
+        amount: item._sum.ticketPrice?.toNumber() || 0,
+      }))
+    );
+
+    const charts = {
+      spendingOverTime: combinedSpending,
+      ticketsPaymentStatus: ticketsPaymentStatus,
+      bookingsByStatus: formattedBookingsByStatus,
+    };
+
+    return ApiResponse(charts);
+  }
+
+  private combineSpendingData(
+    bookings: { date: Date; amount: number }[],
+    tickets: { date: Date; amount: number }[]
+  ) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const monthlySpending = new Map<string, number>();
+
+    // Initialize last 6 months with 0
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthKey = `${months[date.getMonth()]} ${date.getFullYear()}`;
+      monthlySpending.set(monthKey, 0);
+    }
+
+    // Add bookings spending
+    bookings.forEach(item => {
+      const monthKey = `${months[item.date.getMonth()]} ${item.date.getFullYear()}`;
+      monthlySpending.set(monthKey, (monthlySpending.get(monthKey) || 0) + item.amount);
+    });
+
+    // Add tickets spending
+    tickets.forEach(item => {
+      const monthKey = `${months[item.date.getMonth()]} ${item.date.getFullYear()}`;
+      monthlySpending.set(monthKey, (monthlySpending.get(monthKey) || 0) + item.amount);
+    });
+
+    return Array.from(monthlySpending.entries()).map(([month, amount]) => ({
+      month,
+      amount: Math.round(amount * 100) / 100, // Round to 2 decimal places
+    }));
+  }
+
   async getStats() {
     const [
       totalUsers,
