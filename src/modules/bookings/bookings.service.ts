@@ -59,6 +59,16 @@ export class BookingsService {
     return ApiResponse(BookingListResponseDto.fromEntities(bookings));
   }
 
+  public async findByCustomerId(customerId: string) {
+    const customer = await this.customersRepository.findById(customerId);
+    if (!customer) {
+      return ErrorResponse(BookingErrors.CUSTOMER_NOT_FOUND);
+    }
+
+    const bookings = await this.bookingsRepository.findByCustomerId(customerId);
+    return ApiResponse(BookingListResponseDto.fromEntities(bookings));
+  }
+
   public async findMyBooking(userId: string, bookingId: string) {
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {

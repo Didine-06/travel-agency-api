@@ -149,6 +149,43 @@ export class BookingsController {
     return this.bookingsService.findAll();
   }
 
+  @Get('customer/:customerId')
+  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @ApiOperation({ summary: 'Get bookings for a specific customer (Admin/Agent)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of customer bookings',
+    type: [BookingListResponseDto],
+  })
+  public async getCustomerBookings(
+    @Param('customerId') customerId: string,
+    @UserLanguage() lang: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.bookingsService.findByCustomerId(customerId);
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    if (result.isError && 'error' in result) {
+      const translatedMessage = this.i18n.translateError(result.error, lang);
+      const errorResponse = {
+        ...result,
+        message: translatedMessage,
+      };
+
+      switch (result.error as BookingErrors) {
+        case BookingErrors.CUSTOMER_NOT_FOUND:
+          return res.status(HttpStatus.NOT_FOUND).json(errorResponse);
+        default:
+          return res
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .json(errorResponse);
+      }
+    }
+  }
+
   @Get('my-bookings')
   @Roles(UserRole.CLIENT)
   @ApiOperation({ summary: 'Get bookings for the current customer' })
