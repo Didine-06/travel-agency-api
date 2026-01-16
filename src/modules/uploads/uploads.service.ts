@@ -14,18 +14,33 @@ export class UploadsService {
     }
   }
 
-  async uploadImage(file: Express.Multer.File) {
+  /**
+   * Upload a file to a specific subdirectory
+   * @param file The file to upload
+   * @param subDirectory The subdirectory (e.g., 'flight-tickets', 'profiles')
+   */
+  async uploadFile(file: Express.Multer.File, subDirectory: string = 'general') {
     try {
-      const fileName = `${Date.now()}-${file.originalname}`;
-      const filePath = path.join(this.uploadDir, fileName);
+      // Create subdirectory if it doesn't exist
+      const targetDir = path.join(this.uploadDir, subDirectory);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      // Generate unique filename
+      const fileExtension = path.extname(file.originalname);
+      const fileNameWithoutExt = path.basename(file.originalname, fileExtension);
+      const uniqueFileName = `${Date.now()}-${fileNameWithoutExt}${fileExtension}`;
+      const filePath = path.join(targetDir, uniqueFileName);
 
       // Save file
       fs.writeFileSync(filePath, file.buffer);
 
-      const fileUrl = `/uploads/${fileName}`;
+      // Return relative URL path
+      const fileUrl = `/uploads/${subDirectory}/${uniqueFileName}`;
 
       return ApiResponse({
-        fileName,
+        fileName: uniqueFileName,
         fileUrl,
         mimeType: file.mimetype,
         size: file.size,
@@ -35,9 +50,15 @@ export class UploadsService {
     }
   }
 
-  async deleteFile(fileName: string) {
+  /**
+   * Delete a file from a subdirectory
+   * @param fileUrl The file URL (e.g., '/uploads/flight-tickets/123-file.pdf')
+   */
+  async deleteFile(fileUrl: string) {
     try {
-      const filePath = path.join(this.uploadDir, fileName);
+      // Extract path from URL
+      const relativePath = fileUrl.replace(/^\/uploads\//, '');
+      const filePath = path.join(this.uploadDir, relativePath);
 
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -47,6 +68,41 @@ export class UploadsService {
       return ErrorResponse('FILE_NOT_FOUND');
     } catch (error) {
       return ErrorResponse('DELETE_FAILED');
+    }
+  }
+
+  /**
+   * Get file stream for serving
+   * @param fileUrl The file URL
+   */
+  getFileStream(fileUrl: string): { stream: fs.ReadStream; mimeType: string } | null {
+    try {
+      const relativePath = fileUrl.replace(/^\/uploads\//, '');
+      const filePath = path.join(this.uploadDir, relativePath);
+
+      if (!fs.existsSync(filePath)) {
+        return null;
+      }
+
+      const stream = fs.createReadStream(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      
+      // Determine MIME type based on extension
+      const mimeTypes: Record<string, string> = {
+        '.pdf': 'application/pdf',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+
+      const mimeType = mimeTypes[ext] || 'application/octet-stream';
+
+      return { stream, mimeType };
+    } catch (error) {
+      return null;
     }
   }
 }
