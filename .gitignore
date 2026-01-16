@@ -49,6 +49,9 @@ lerna-debug.log*
 .tmp
 .vscode
 
+# Uploads
+/uploads
+
 # Runtime data
 pids
 *.pid
