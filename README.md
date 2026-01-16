@@ -33,6 +33,7 @@ JWT_SECRET="your-secret-key"
 JWT_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV="development"
+APP_URL="http://localhost:3000"
 ```
 
 ### 4. Setup database
