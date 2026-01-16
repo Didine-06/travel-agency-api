@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/all-exeptions-filter';
+import { ValidationPipe } from '@nestjs/common';
 
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './common/logger.config';
@@ -13,6 +14,14 @@ async function bootstrap() {
   });
 
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Enable validation with transformation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+    }),
+  );
 
   // Enable CORS
   app.enableCors();
