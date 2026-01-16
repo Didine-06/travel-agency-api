@@ -317,11 +317,7 @@ export class BookingsController {
     );
 
     if (result.isSuccess) {
-      const message = this.i18n.translate('BOOKING_UPDATED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-      });
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -364,11 +360,7 @@ export class BookingsController {
     const result = await this.bookingsService.cancelMyBooking(user.userId, id, cancelBookingDto);
 
     if (result.isSuccess) {
-      const message = this.i18n.translate('BOOKING_CANCELLED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-      });
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -412,11 +404,7 @@ export class BookingsController {
     const result = await this.bookingsService.deleteMyBooking(user.userId, id);
 
     if (result.isSuccess) {
-      const message = this.i18n.translate('BOOKING_DELETED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-      });
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -460,13 +448,8 @@ export class BookingsController {
       deleteBookingsDto,
     );
 
-    if (result.isSuccess && 'data' in result) {
-      const message = this.i18n.translate('BOOKINGS_DELETED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-        count: result.data.count,
-      });
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -511,11 +494,7 @@ export class BookingsController {
     const result = await this.bookingsService.update(id, updateBookingDto, user);
 
     if (result.isSuccess) {
-      const message = this.i18n.translate('BOOKING_UPDATED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-      });
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -555,11 +534,7 @@ export class BookingsController {
     const result = await this.bookingsService.cancelBooking(id, cancelBookingDto, user);
 
     if (result.isSuccess) {
-      const message = this.i18n.translate('BOOKING_CANCELLED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-      });
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -597,11 +572,7 @@ export class BookingsController {
     const result = await this.bookingsService.delete(id);
 
     if (result.isSuccess) {
-      const message = this.i18n.translate('BOOKING_DELETED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-      });
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {
@@ -629,13 +600,8 @@ export class BookingsController {
   ) {
     const result = await this.bookingsService.deleteMany(deleteBookingsDto);
 
-    if (result.isSuccess && 'data' in result) {
-      const message = this.i18n.translate('BOOKINGS_DELETED_SUCCESSFULLY', lang);
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message,
-        count: result.data.count,
-      });
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
     }
 
     if (result.isError && 'error' in result) {

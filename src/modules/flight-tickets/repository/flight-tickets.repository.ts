@@ -7,16 +7,13 @@ export class FlightTicketsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: any): Promise<FlightTicket> {
-    const { customerId, bookingId, ...ticketData } = data;
+    const { customerId, ...ticketData } = data;
 
     return await this.prisma.flightTicket.create({
       data: {
         ...ticketData,
         customer: {
           connect: { id: customerId },
-        },
-        booking: {
-          connect: { id: bookingId },
         },
       },
       include: {
@@ -28,15 +25,6 @@ export class FlightTicketsRepository {
                 email: true,
                 firstName: true,
                 lastName: true,
-              },
-            },
-          },
-        },
-        booking: {
-          include: {
-            package: {
-              include: {
-                destination: true,
               },
             },
           },
@@ -56,15 +44,6 @@ export class FlightTicketsRepository {
                 email: true,
                 firstName: true,
                 lastName: true,
-              },
-            },
-          },
-        },
-        booking: {
-          include: {
-            package: {
-              include: {
-                destination: true,
               },
             },
           },
@@ -90,15 +69,6 @@ export class FlightTicketsRepository {
             },
           },
         },
-        booking: {
-          include: {
-            package: {
-              include: {
-                destination: true,
-              },
-            },
-          },
-        },
       },
     });
   }
@@ -119,37 +89,6 @@ export class FlightTicketsRepository {
             },
           },
         },
-        booking: {
-          include: {
-            package: {
-              include: {
-                destination: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async findByBookingId(bookingId: string): Promise<FlightTicket[]> {
-    return await this.prisma.flightTicket.findMany({
-      where: { bookingId },
-      include: {
-        customer: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        },
-        booking: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -174,7 +113,6 @@ export class FlightTicketsRepository {
       data,
       include: {
         customer: true,
-        booking: true,
       },
     });
   }
@@ -198,12 +136,6 @@ export class FlightTicketsRepository {
   async countByCustomerId(customerId: string): Promise<number> {
     return await this.prisma.flightTicket.count({
       where: { customerId },
-    });
-  }
-
-  async countByBookingId(bookingId: string): Promise<number> {
-    return await this.prisma.flightTicket.count({
-      where: { bookingId },
     });
   }
 }

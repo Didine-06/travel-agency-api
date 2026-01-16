@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FlightTicketsRepository } from './repository/flight-tickets.repository';
 import {
   CreateFlightTicketDto,
@@ -14,20 +15,25 @@ import {
 import { ApiResponse, ErrorResponse } from '../../common/helpers';
 import { FlightTicketErrors } from './enums';
 import { CustomersRepository } from '../customers/repository/customers.repository';
-import { BookingsRepository } from '../bookings/repository/bookings.repository';
+import { UploadsService } from '../uploads/uploads.service';
 import { TicketStatus } from '@prisma/client';
 
 @Injectable()
 export class FlightTicketsService {
+  private readonly appUrl: string;
+
   constructor(
     private readonly flightTicketsRepository: FlightTicketsRepository,
     private readonly customersRepository: CustomersRepository,
-    private readonly bookingsRepository: BookingsRepository,
-  ) {}
+    private readonly uploadsService: UploadsService,
+    private readonly configService: ConfigService,
+  ) {
+    this.appUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
+  }
 
   // ===== Admin/Agent Methods =====
 
-  public async create(createFlightTicketDto: CreateFlightTicketDto) {
+  public async create(createFlightTicketDto: CreateFlightTicketDto, file?: Express.Multer.File) {
     const customer = await this.customersRepository.findById(
       createFlightTicketDto.customerId,
     );
@@ -35,28 +41,39 @@ export class FlightTicketsService {
       return ErrorResponse(FlightTicketErrors.CUSTOMER_NOT_FOUND);
     }
 
-    const booking = await this.bookingsRepository.findById(
-      createFlightTicketDto.bookingId,
-    );
-    if (!booking) {
-      return ErrorResponse(FlightTicketErrors.BOOKING_NOT_FOUND);
-    }
-
-    // Validation des dates
+    // Validate dates
     const departure = new Date(createFlightTicketDto.departureDateTime);
-    const arrival = new Date(createFlightTicketDto.arrivalDateTime);
 
-    if (isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
+    if (isNaN(departure.getTime())) {
       return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
     }
 
-    if (arrival <= departure) {
-      return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+    // Validate return date if it's a round trip
+    if (createFlightTicketDto.isRoundTrip && createFlightTicketDto.returnDate) {
+      const returnDate = new Date(createFlightTicketDto.returnDate);
+
+      if (isNaN(returnDate.getTime())) {
+        return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
+      }
+
+      if (returnDate <= departure) {
+        return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+      }
     }
 
-    const ticket = await this.flightTicketsRepository.create(
-      createFlightTicketDto,
-    );
+    // Handle file upload if provided
+    let attachmentPath: string | undefined;
+    if (file) {
+      const uploadResult = await this.uploadsService.uploadFile(file, 'flight-tickets');
+      if (uploadResult.isSuccess && 'data' in uploadResult) {
+        attachmentPath = uploadResult.data.fileUrl;
+      }
+    }
+
+    const ticket = await this.flightTicketsRepository.create({
+      ...createFlightTicketDto,
+      attachmentPath,
+    });
     return ApiResponse(ticket);
   }
 
@@ -77,6 +94,7 @@ export class FlightTicketsService {
   public async update(
     id: string,
     updateFlightTicketDto: UpdateFlightTicketDto,
+    file?: Express.Multer.File,
     user?: any,
   ) {
     const existingTicket = await this.flightTicketsRepository.findById(id);
@@ -84,29 +102,54 @@ export class FlightTicketsService {
       return ErrorResponse(FlightTicketErrors.TICKET_NOT_FOUND);
     }
 
-    // Validation des dates si fournies
+    // Validate dates if provided
     if (
       updateFlightTicketDto.departureDateTime ||
-      updateFlightTicketDto.arrivalDateTime
+      updateFlightTicketDto.returnDate
     ) {
       const departure = new Date(
         updateFlightTicketDto.departureDateTime ||
           existingTicket.departureDateTime,
       );
-      const arrival = new Date(
-        updateFlightTicketDto.arrivalDateTime || existingTicket.arrivalDateTime,
-      );
 
-      if (isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
+      if (isNaN(departure.getTime())) {
         return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
       }
 
-      if (arrival <= departure) {
-        return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+      // Validate return date if provided or if it's a round trip
+      const isRoundTrip = updateFlightTicketDto.isRoundTrip ?? existingTicket.isRoundTrip;
+      const returnDate = updateFlightTicketDto.returnDate || existingTicket.returnDate;
+
+      if (isRoundTrip && returnDate) {
+        const returnDateTime = new Date(returnDate);
+
+        if (isNaN(returnDateTime.getTime())) {
+          return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
+        }
+
+        if (returnDateTime <= departure) {
+          return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+        }
       }
     }
 
-    await this.flightTicketsRepository.update(id, updateFlightTicketDto);
+    // Handle file upload if provided
+    let attachmentPath: string | undefined;
+    if (file) {
+      const uploadResult = await this.uploadsService.uploadFile(file, 'flight-tickets');
+      if (uploadResult.isSuccess && 'data' in uploadResult) {
+        attachmentPath = uploadResult.data.fileUrl;
+        // Optionally delete old file if it exists
+        if (existingTicket.attachmentPath) {
+          await this.uploadsService.deleteFile(existingTicket.attachmentPath);
+        }
+      }
+    }
+
+    await this.flightTicketsRepository.update(id, {
+      ...updateFlightTicketDto,
+      ...(attachmentPath && { attachmentPath }),
+    });
 
     return ApiResponse({});
   }
@@ -210,40 +253,54 @@ export class FlightTicketsService {
       return ErrorResponse(FlightTicketErrors.UNAUTHORIZED_ACCESS);
     }
 
-    return ApiResponse(ticket);
+    // Add backend URL to attachment path
+    const ticketWithFullUrl = {
+      ...ticket,
+      attachmentPath: ticket.attachmentPath 
+        ? `${this.appUrl}${ticket.attachmentPath}` 
+        : ticket.attachmentPath,
+    };
+
+    return ApiResponse(ticketWithFullUrl);
   }
 
   public async createMyTicket(
     userId: string,
     createMyFlightTicketDto: CreateMyFlightTicketDto,
+    file?: Express.Multer.File,
   ) {
     const customer = await this.customersRepository.findByUserId(userId);
     if (!customer) {
       return ErrorResponse(FlightTicketErrors.CUSTOMER_NOT_FOUND);
     }
 
-    const booking = await this.bookingsRepository.findById(
-      createMyFlightTicketDto.bookingId,
-    );
-    if (!booking) {
-      return ErrorResponse(FlightTicketErrors.BOOKING_NOT_FOUND);
-    }
-
-    // Vérifier que la réservation appartient au client
-    if (booking.customerId !== customer.id) {
-      return ErrorResponse(FlightTicketErrors.UNAUTHORIZED_ACCESS);
-    }
-
-    // Validation des dates
+    // Validate dates
     const departure = new Date(createMyFlightTicketDto.departureDateTime);
-    const arrival = new Date(createMyFlightTicketDto.arrivalDateTime);
 
-    if (isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
+    if (isNaN(departure.getTime())) {
       return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
     }
 
-    if (arrival <= departure) {
-      return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+    // Validate return date if it's a round trip
+    if (createMyFlightTicketDto.isRoundTrip && createMyFlightTicketDto.returnDate) {
+      const returnDate = new Date(createMyFlightTicketDto.returnDate);
+
+      if (isNaN(returnDate.getTime())) {
+        return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
+      }
+
+      if (returnDate <= departure) {
+        return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+      }
+    }
+
+    // Handle file upload if provided
+    let attachmentPath: string | undefined;
+    if (file) {
+      const uploadResult = await this.uploadsService.uploadFile(file, 'flight-tickets');
+      if (uploadResult.isSuccess && 'data' in uploadResult) {
+        attachmentPath = uploadResult.data.fileUrl;
+      }
     }
 
     const createFlightTicketDto: CreateFlightTicketDto = {
@@ -251,9 +308,10 @@ export class FlightTicketsService {
       customerId: customer.id,
     };
 
-    const ticket = await this.flightTicketsRepository.create(
-      createFlightTicketDto,
-    );
+    const ticket = await this.flightTicketsRepository.create({
+      ...createFlightTicketDto,
+      attachmentPath,
+    });
     return ApiResponse(ticket);
   }
 
@@ -261,6 +319,7 @@ export class FlightTicketsService {
     userId: string,
     ticketId: string,
     updateMyFlightTicketDto: UpdateMyFlightTicketDto,
+    file?: Express.Multer.File,
     user?: any,
   ) {
     const customer = await this.customersRepository.findByUserId(userId);
@@ -278,35 +337,59 @@ export class FlightTicketsService {
       return ErrorResponse(FlightTicketErrors.UNAUTHORIZED_ACCESS);
     }
 
-    // Le client ne peut modifier que les billets RESERVED
+    // Customer can only modify RESERVED tickets
     if (existingTicket.status !== TicketStatus.RESERVED) {
       return ErrorResponse(FlightTicketErrors.INVALID_TICKET_STATUS);
     }
 
-    // Validation des dates si fournies
+    // Validate dates if provided
     if (
       updateMyFlightTicketDto.departureDateTime ||
-      updateMyFlightTicketDto.arrivalDateTime
+      updateMyFlightTicketDto.returnDate
     ) {
       const departure = new Date(
         updateMyFlightTicketDto.departureDateTime ||
           existingTicket.departureDateTime,
       );
-      const arrival = new Date(
-        updateMyFlightTicketDto.arrivalDateTime ||
-          existingTicket.arrivalDateTime,
-      );
 
-      if (isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
+      if (isNaN(departure.getTime())) {
         return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
       }
 
-      if (arrival <= departure) {
-        return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+      // Validate return date if provided or if it's a round trip
+      const isRoundTrip = updateMyFlightTicketDto.isRoundTrip ?? existingTicket.isRoundTrip;
+      const returnDate = updateMyFlightTicketDto.returnDate || existingTicket.returnDate;
+
+      if (isRoundTrip && returnDate) {
+        const returnDateTime = new Date(returnDate);
+
+        if (isNaN(returnDateTime.getTime())) {
+          return ErrorResponse(FlightTicketErrors.INVALID_DATETIME);
+        }
+
+        if (returnDateTime <= departure) {
+          return ErrorResponse(FlightTicketErrors.ARRIVAL_BEFORE_DEPARTURE);
+        }
       }
     }
 
-    await this.flightTicketsRepository.update(ticketId, updateMyFlightTicketDto);
+    // Handle file upload if provided
+    let attachmentPath: string | undefined;
+    if (file) {
+      const uploadResult = await this.uploadsService.uploadFile(file, 'flight-tickets');
+      if (uploadResult.isSuccess && 'data' in uploadResult) {
+        attachmentPath = uploadResult.data.fileUrl;
+        // Optionally delete old file if it exists
+        if (existingTicket.attachmentPath) {
+          await this.uploadsService.deleteFile(existingTicket.attachmentPath);
+        }
+      }
+    }
+
+    await this.flightTicketsRepository.update(ticketId, {
+      ...updateMyFlightTicketDto,
+      ...(attachmentPath && { attachmentPath }),
+    });
 
     return ApiResponse({});
   }

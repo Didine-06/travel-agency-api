@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SeatClass, TicketStatus } from '@prisma/client';
 
 export class FlightTicketResponseDto {
@@ -14,8 +14,14 @@ export class FlightTicketResponseDto {
   @ApiProperty()
   departureDateTime: Date;
 
+  @ApiPropertyOptional()
+  returnDate?: Date;
+
   @ApiProperty()
-  arrivalDateTime: Date;
+  isRoundTrip: boolean;
+
+  @ApiPropertyOptional()
+  airline?: string;
 
   @ApiProperty({ enum: SeatClass })
   seatClass: SeatClass;

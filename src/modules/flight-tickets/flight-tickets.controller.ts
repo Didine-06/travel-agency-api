@@ -9,12 +9,17 @@ import {
   Patch,
   Delete,
   Param,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { FlightTicketsService } from './flight-tickets.service';
@@ -109,7 +114,9 @@ export class FlightTicketsController {
 
   @Post('my-tickets')
   @Roles(UserRole.CLIENT)
+  @UseInterceptors(FileInterceptor('attachment'))
   @ApiOperation({ summary: 'Create my flight ticket (Client)' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 201,
     description: 'My flight ticket created',
@@ -118,12 +125,14 @@ export class FlightTicketsController {
   public async createMyTicket(
     @CurrentUser() user: any,
     @Body() createMyFlightTicketDto: CreateMyFlightTicketDto,
+    @UploadedFile() file: Express.Multer.File,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
     const result = await this.flightTicketsService.createMyTicket(
       user.userId,
       createMyFlightTicketDto,
+      file,
     );
 
     if (result.isSuccess) {
@@ -157,7 +166,9 @@ export class FlightTicketsController {
 
   @Patch('my-tickets/:id')
   @Roles(UserRole.CLIENT)
+  @UseInterceptors(FileInterceptor('attachment'))
   @ApiOperation({ summary: 'Update my flight ticket (Client)' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 200,
     description: 'My flight ticket updated',
@@ -166,6 +177,7 @@ export class FlightTicketsController {
     @CurrentUser() user: any,
     @Param('id') id: string,
     @Body() updateMyFlightTicketDto: UpdateMyFlightTicketDto,
+    @UploadedFile() file: Express.Multer.File,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
@@ -173,6 +185,7 @@ export class FlightTicketsController {
       user.userId,
       id,
       updateMyFlightTicketDto,
+      file,
       user,
     );
 
@@ -348,7 +361,9 @@ export class FlightTicketsController {
 
   @Post()
   @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @UseInterceptors(FileInterceptor('attachment'))
   @ApiOperation({ summary: 'Create a new flight ticket (Admin/Agent)' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 201,
     description: 'Flight ticket created',
@@ -356,11 +371,12 @@ export class FlightTicketsController {
   })
   public async create(
     @Body() createFlightTicketDto: CreateFlightTicketDto,
+    @UploadedFile() file: Express.Multer.File,
     @UserLanguage() lang: string,
     @Res() res: Response,
   ) {
     const result =
-      await this.flightTicketsService.create(createFlightTicketDto);
+      await this.flightTicketsService.create(createFlightTicketDto, file);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.CREATED).json(result);
@@ -441,7 +457,9 @@ export class FlightTicketsController {
 
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @UseInterceptors(FileInterceptor('attachment'))
   @ApiOperation({ summary: 'Update flight ticket (Admin/Agent)' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 200,
     description: 'Flight ticket updated',
@@ -449,6 +467,7 @@ export class FlightTicketsController {
   public async update(
     @Param('id') id: string,
     @Body() updateFlightTicketDto: UpdateFlightTicketDto,
+    @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: any,
     @UserLanguage() lang: string,
     @Res() res: Response,
@@ -456,6 +475,7 @@ export class FlightTicketsController {
     const result = await this.flightTicketsService.update(
       id,
       updateFlightTicketDto,
+      file,
       user,
     );
 
