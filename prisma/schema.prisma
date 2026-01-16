@@ -138,7 +138,6 @@ model Booking {
 
   customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   package       Package        @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  flightTickets FlightTicket[]
 
   @@map("bookings")
 }
@@ -152,17 +151,18 @@ enum BookingStatus {
 
 model FlightTicket {
   id                String       @id @default(uuid())
-  bookingId         String       @map("booking_id")
   customerId        String       @map("customer_id")
   departureDateTime DateTime     @map("departure_datetime")
-  arrivalDateTime   DateTime     @map("arrival_datetime")
+  returnDate        DateTime?    @map("return_date")
+  isRoundTrip       Boolean      @default(false) @map("is_round_trip")
+  airline           String?
   seatClass         SeatClass    @map("seat_class")
   ticketPrice       Decimal      @db.Decimal(10, 2) @map("ticket_price")
   status            TicketStatus @default(RESERVED)
+  attachmentPath    String?      @map("attachment_path")
   createdAt         DateTime     @default(now()) @map("created_at")
   updatedAt         DateTime     @updatedAt @map("updated_at")
 
-  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@map("flight_tickets")
