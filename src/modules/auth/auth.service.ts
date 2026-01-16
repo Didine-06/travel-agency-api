@@ -98,9 +98,7 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
-    const user = await this.usersRepository.findByEmail(
-      (await this.usersRepository.findById(userId))?.email || '',
-    );
+    const user = await this.usersRepository.findById(userId);
 
     if (!user || !user.isActive) {
       return ErrorResponse(AuthErrors.USER_NOT_FOUND);
