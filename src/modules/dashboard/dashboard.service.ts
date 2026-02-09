@@ -298,6 +298,246 @@ export class DashboardService {
     }));
   }
 
+  async getAgentStats(userId: string) {
+    // Get agent
+    const agent = await this.prisma.agent.findUnique({
+      where: { userId },
+    });
+
+    if (!agent) {
+      // Return empty stats instead of null so frontend can still render
+      const emptyStats = {
+        consultations: { total: 0, pending: 0, assignedToMe: 0, completed: 0 },
+        bookings: { total: 0, pending: 0, confirmed: 0, cancelled: 0 },
+        packages: { total: 0, active: 0 },
+        nextAppointment: {
+          id: null,
+          subject: null,
+          consultationDate: null,
+          customerName: null,
+          status: null,
+        },
+      };
+      return ApiResponse(emptyStats);
+    }
+
+    // Get all stats in parallel
+    const [
+      totalMyConsultations,
+      pendingConsultations,
+      assignedToMeConsultations,
+      completedConsultations,
+      totalBookings,
+      pendingBookings,
+      confirmedBookings,
+      cancelledBookings,
+      totalPackages,
+      activePackages,
+      nextAppointment,
+    ] = await Promise.all([
+      this.prisma.consultation.count({
+        where: { agentId: agent.id },
+      }),
+      this.prisma.consultation.count({
+        where: { status: 'PENDING', agentId: null },
+      }),
+      this.prisma.consultation.count({
+        where: { agentId: agent.id, status: 'CONFIRMED' },
+      }),
+      this.prisma.consultation.count({
+        where: { agentId: agent.id, status: 'COMPLETED' },
+      }),
+      this.prisma.booking.count(),
+      this.prisma.booking.count({ where: { status: 'PENDING' } }),
+      this.prisma.booking.count({ where: { status: 'CONFIRMED' } }),
+      this.prisma.booking.count({ where: { status: 'CANCELLED' } }),
+      this.prisma.package.count(),
+      this.prisma.package.count({ where: { isActive: true } }),
+      this.prisma.consultation.findFirst({
+        where: {
+          agentId: agent.id,
+          consultationDate: { gte: new Date() },
+          status: { in: ['PENDING', 'CONFIRMED'] },
+        },
+        orderBy: { consultationDate: 'asc' },
+        include: {
+          customer: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const stats = {
+      consultations: {
+        total: totalMyConsultations,
+        pending: pendingConsultations,
+        assignedToMe: assignedToMeConsultations,
+        completed: completedConsultations,
+      },
+      bookings: {
+        total: totalBookings,
+        pending: pendingBookings,
+        confirmed: confirmedBookings,
+        cancelled: cancelledBookings,
+      },
+      packages: {
+        total: totalPackages,
+        active: activePackages,
+      },
+      nextAppointment: nextAppointment
+        ? {
+            id: nextAppointment.id,
+            subject: nextAppointment.subject,
+            consultationDate: nextAppointment.consultationDate,
+            customerName: nextAppointment.customer
+              ? `${nextAppointment.customer.user.firstName || ''} ${nextAppointment.customer.user.lastName || ''}`.trim()
+              : null,
+            status: nextAppointment.status,
+          }
+        : {
+            id: null,
+            subject: null,
+            consultationDate: null,
+            customerName: null,
+            status: null,
+          },
+    };
+
+    return ApiResponse(stats);
+  }
+
+  async getAgentCharts(userId: string) {
+    // Get agent
+    const agent = await this.prisma.agent.findUnique({
+      where: { userId },
+    });
+
+    if (!agent) {
+      // Return empty charts instead of null so frontend can still render
+      const emptyCharts = {
+        consultationsByStatus: [],
+        bookingsByStatus: [],
+        consultationsOverTime: [],
+      };
+      return ApiResponse(emptyCharts);
+    }
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    // Get consultation stats in parallel
+    const [consultationsByStatus, bookingsByStatus, consultationsRaw] =
+      await Promise.all([
+        this.prisma.consultation.groupBy({
+          by: ['status'],
+          where: { agentId: agent.id },
+          _count: { id: true },
+        }),
+        this.prisma.booking.groupBy({
+          by: ['status'],
+          _count: { id: true },
+        }),
+        this.prisma.consultation.findMany({
+          where: {
+            agentId: agent.id,
+            createdAt: { gte: sixMonthsAgo },
+          },
+          select: { createdAt: true },
+        }),
+      ]);
+
+    // Format consultations by status
+    const totalConsultations = consultationsByStatus.reduce(
+      (sum, item) => sum + item._count.id,
+      0,
+    );
+    const formattedConsultationsByStatus = consultationsByStatus.map(
+      (item) => ({
+        status: item.status,
+        count: item._count.id,
+        percentage:
+          totalConsultations > 0
+            ? Math.round((item._count.id / totalConsultations) * 100 * 10) / 10
+            : 0,
+      }),
+    );
+
+    // Format bookings by status
+    const totalBookings = bookingsByStatus.reduce(
+      (sum, item) => sum + item._count.id,
+      0,
+    );
+    const formattedBookingsByStatus = bookingsByStatus.map((item) => ({
+      status: item.status,
+      count: item._count.id,
+      percentage:
+        totalBookings > 0
+          ? Math.round((item._count.id / totalBookings) * 100 * 10) / 10
+          : 0,
+    }));
+
+    // Format consultations over time
+    const consultationsOverTime = this.groupByMonth(
+      consultationsRaw.map((c) => c.createdAt),
+    );
+
+    const charts = {
+      consultationsByStatus: formattedConsultationsByStatus,
+      bookingsByStatus: formattedBookingsByStatus,
+      consultationsOverTime,
+    };
+
+    return ApiResponse(charts);
+  }
+
+  private groupByMonth(dates: Date[]) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    const monthlyCounts = new Map<string, number>();
+
+    // Initialize last 6 months with 0
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthKey = `${months[date.getMonth()]} ${date.getFullYear()}`;
+      monthlyCounts.set(monthKey, 0);
+    }
+
+    // Count dates by month
+    dates.forEach((date) => {
+      const monthKey = `${months[date.getMonth()]} ${date.getFullYear()}`;
+      if (monthlyCounts.has(monthKey)) {
+        monthlyCounts.set(monthKey, (monthlyCounts.get(monthKey) || 0) + 1);
+      }
+    });
+
+    return Array.from(monthlyCounts.entries()).map(([month, count]) => ({
+      month,
+      count,
+    }));
+  }
+
   async getStats() {
     const [
       totalUsers,

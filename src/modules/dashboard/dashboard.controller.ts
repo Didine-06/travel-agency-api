@@ -13,7 +13,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { DashboardService } from './dashboard.service';
-import { DashboardStatsDto, ClientDashboardStatsDto, ClientDashboardChartsDto } from './dtos';
+import { DashboardStatsDto, ClientDashboardStatsDto, ClientDashboardChartsDto, AgentDashboardStatsDto, AgentDashboardChartsDto } from './dtos';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -80,6 +80,48 @@ export class DashboardController {
     @Res() res: Response,
   ) {
     const result = await this.dashboardService.getClientCharts(user.userId);
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(result);
+  }
+
+  @Get('agent/stats')
+  @Roles(UserRole.AGENT)
+  @ApiOperation({ summary: 'Get dashboard statistics for agent' })
+  @ApiResponse({
+    status: 200,
+    description: 'Agent dashboard statistics',
+    type: AgentDashboardStatsDto,
+  })
+  async getAgentStats(
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
+    const result = await this.dashboardService.getAgentStats(user.userId);
+
+    if (result.isSuccess) {
+      return res.status(HttpStatus.OK).json(result);
+    }
+
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(result);
+  }
+
+  @Get('agent/charts')
+  @Roles(UserRole.AGENT)
+  @ApiOperation({ summary: 'Get dashboard charts data for agent' })
+  @ApiResponse({
+    status: 200,
+    description: 'Agent dashboard charts data',
+    type: AgentDashboardChartsDto,
+  })
+  async getAgentCharts(
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
+    const result = await this.dashboardService.getAgentCharts(user.userId);
 
     if (result.isSuccess) {
       return res.status(HttpStatus.OK).json(result);
